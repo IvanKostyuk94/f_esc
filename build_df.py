@@ -73,7 +73,7 @@ def construct_halo_dict(simname, config_dust, config_no_dust):
                 csim = Sim(rundir)
                 ls = []
                 for i, pf in enumerate(csim.getAllphysfiles()):
-                    with h5py.File(config.f_esc_file(pf)) as f:
+                    with h5py.File(config.f_esc_file(pf),'r') as f:
                         fesc = h5toDict(f)
                     ls.append(fesc)
                 df.loc[ID, 'f_esc'] = np.array(ls)
@@ -90,8 +90,8 @@ def construct_halo_dict(simname, config_dust, config_no_dust):
 
 # Construct a dataframe 
 def construct_dataframe(dictionary, settings=['dust', 'no_dust'], name='f_esc.h5'):
-    store = pd.HDFStore(name)
-    
+    store = pd.HDFStore(name,'w')
+
     for setting in settings:
         f_esc = []
         halo_masses = []
@@ -139,24 +139,24 @@ def construct_dataframe(dictionary, settings=['dust', 'no_dust'], name='f_esc.h5
     
     return 
 
+if __name__ == "__main__":
+    # Set some global variables such as the redshifts of the snapshots and the simulation name
+    z = [6,8,10]
+    simname = 'L35n2160TNG'
+    h = 6.62607004e-34
+    e = 1.60217662e-19
+    j_to_erg = 1e7
+    norm = 1e52
 
-# Set some global variables such as the redshifts of the snapshots and the simulation name
-z = [6,8,10]
-simname = 'L35n2160TNG'
-h = 6.62607004e-34
-e = 1.60217662e-19
-j_to_erg = 1e7
-norm = 1e52
+    # load the config module for the fiducial 2 dust configuration
+    spec_dust = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/fid2d/config.py")
+    config_dust = importlib.util.module_from_spec(spec_dust)
+    spec_dust.loader.exec_module(config_dust)
 
-# load the config module for the fiducial 2 dust configuration
-spec_dust = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/fid2d/config.py")
-config_dust = importlib.util.module_from_spec(spec_dust)
-spec_dust.loader.exec_module(config_dust)
+    # load the config module for the fiducial 2 no dust configuration
+    spec_no_dust = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/fid2/config.py")
+    config_no_dust = importlib.util.module_from_spec(spec_no_dust)
+    spec_no_dust.loader.exec_module(config_no_dust)
 
-# load the config module for the fiducial 2 no dust configuration
-spec_no_dust = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/fid2/config.py")
-config_no_dust = importlib.util.module_from_spec(spec_no_dust)
-spec_no_dust.loader.exec_module(config_no_dust)
-
-halos = construct_halo_dict(simname, config_dust, config_no_dust)
-construct_dataframe(dictionary=halos, name = 'df_f_esc.h5')
+    halos = construct_halo_dict(simname, config_dust, config_no_dust)
+    construct_dataframe(dictionary=halos, name = 'df_f_esc.h5')
