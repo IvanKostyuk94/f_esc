@@ -67,22 +67,39 @@ def construct_halo_dict(simname, config_dust, config_no_dust):
             df['csim_path', 0] = np.nan
             for i in range(config.n_rcs):
                 df['f_esc', i] = np.nan
+
+            # Remove halos with defective is_binary test
+            defect_IDs = []
             for ID in config.completed_haloIDs(simname, config.snap_name(snap)):
                 rundir = config.rundir(simname, config.snap_name(snap), config.halo_name(ID))
                 df.loc[ID, 'csim_path'] = rundir
-                csim = Sim(rundir)
+                try:
+                    csim = Sim(rundir)
+                except:
+                    print(f'An error occured in {rundir}')
+                    defect_IDs.append(ID)
                 ls = []
                 for i, pf in enumerate(csim.getAllphysfiles()):
-                    with h5py.File(config.f_esc_file(pf),'r') as f:
-                        fesc = h5toDict(f)
-                    ls.append(fesc)
-                df.loc[ID, 'f_esc'] = np.array(ls)
+                    try:
+                        with h5py.File(config.f_esc_file(pf),'r') as f:
+                            fesc = h5toDict(f)
+                        ls.append(fesc)
+                    except:
+                        pass
+                try:
+                    df.loc[ID, 'f_esc'] = np.array(ls)
+                except:
+                    print(f'Could not load the output of {ID}')
+                    defect_IDs.append(ID)
 
             dic = {}
 
             dic['header'] = sim.snap_cat[snap].header
             dic['df'] = df
-            dic['IDs'] = np.array(config.completed_haloIDs(simname, config.snap_name(snap)))
+            finished_IDs = config.completed_haloIDs(simname, config.snap_name(snap))
+            for ID in defect_IDs:
+                finished_IDs.remove(ID)
+            dic['IDs'] = np.array(finished_IDs)
 
             halos[halo_keys[key]][config.snap_name(snap)] = dic 
 
@@ -139,6 +156,81 @@ def construct_dataframe(dictionary, settings=['dust', 'no_dust'], name='f_esc.h5
     
     return 
 
+def construct_freq_dataframe(dictionary, settings=['dust', 'no_dust'], name='freq_f_esc'):
+    store = pd.HDFStore(name,'w')
+
+    for setting in settings:
+        f_esc = []
+        halo_masses = []
+        metal = []
+        rel_star_mass = []
+        rel_gas_mass = []
+        rel_dust_mass = []
+        all_IDs = []
+        Q0 = []
+        a_star = []
+        redshifts = []
+        per_freq = []
+        per_source = []
+        emitted_photons = []
+        escaped_photons = []
+        frequencies = []
+
+
+        for i,snapshot in enumerate(dictionary[setting].keys()):
+            IDs = dictionary[setting][snapshot]['IDs']
+            
+            f_esc_elements = []
+            per_freq_elements = []
+            per_source_elements = []
+            emitted_photons_elements = []
+            escaped_photons_elements = []
+            frequencies_elements = []
+
+            input_df = dictionary[setting][snapshot]['df']
+            for ID in IDs:
+                f_esc_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['cum'])
+                per_freq_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['per_freq'])
+                per_source_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['per_source'])
+                emitted_photons_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['emitted_photons'])
+                escaped_photons_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['escaped_photons'])
+                frequencies_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['freqs'])
+            
+            group_mass_elements = input_df.loc[IDs, ('GroupMass',0)]
+            metal_elements = input_df.loc[IDs, ('GroupStarMetallicity', 0)]#/1e-3
+            star_mass_elements = input_df.loc[IDs, ('M_star', 0)]#/1e-3
+            gas_elements = input_df.loc[IDs, ('gas_mass',0)]#/1e-1
+            dust_mass_elements = input_df.loc[IDs, ('dust_mass',0)]#/1e-5
+            Q0_elements = input_df.loc[IDs, ('Q_0',0)]#/1e53
+            a_star_elements = input_df.loc[IDs, ('a_star',0)]#/1e8
+
+            f_esc.extend(f_esc_elements)
+            per_freq.extend(per_freq_elements)
+            per_source.extend(per_freq_elements)
+            emitted_photons.extend(emitted_photons_elements)
+            escaped_photons.extend(escaped_photons_elements)
+            halo_masses.extend(group_mass_elements)
+            metal.extend(metal_elements)
+            rel_star_mass.extend(star_mass_elements/group_mass_elements)
+            rel_gas_mass.extend(gas_elements/group_mass_elements)
+            rel_dust_mass.extend(dust_mass_elements/group_mass_elements)
+            redshifts.extend(np.full(len(IDs),z[i]))
+            all_IDs.extend(IDs)
+            Q0.extend(Q0_elements)
+            a_star.extend(a_star_elements)
+            frequencies.extend(frequencies_elements)
+            
+        dataset = pd.DataFrame({'ID':all_IDs, 'z':redshifts, 
+                            'HaloMass':halo_masses, 'Metalicity':metal, 
+                            'FractionStars':rel_star_mass, 'FractionGas':rel_gas_mass,
+                            'FractionDust':rel_dust_mass, 'Q0':Q0, 'aStar':a_star, 'f_esc':f_esc,
+                            'per_freq':per_freq, 'per_source':per_source, 'emitted_photons':emitted_photons, 
+                            'escaped_photons':escaped_photons, 'frequencies':frequencies})
+        store[setting] = dataset
+    store.close()
+
+    return
+
 if __name__ == "__main__":
     # Set some global variables such as the redshifts of the snapshots and the simulation name
     z = [6,8,10]
@@ -159,4 +251,4 @@ if __name__ == "__main__":
     spec_no_dust.loader.exec_module(config_no_dust)
 
     halos = construct_halo_dict(simname, config_dust, config_no_dust)
-    construct_dataframe(dictionary=halos, name = 'df_f_esc.h5')
+    construct_freq_dataframe(dictionary=halos, name = 'df_f_esc_freq.h5')
