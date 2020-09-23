@@ -53,10 +53,15 @@ def h5toDict(f):
 # dict of dicts, first level is TNG simulation, second level is simulation
 # snapshot. For each snapshot, load its header (key 'header') and a halo
 # dataframe (key 'df').
-def construct_halo_dict(simname, config_dust, config_no_dust):
+def construct_halo_dict(simname, config_no_dust, config_dust=None):
     halos = {}
-    halo_keys = ['dust', 'no_dust']
-    for key, config in enumerate([config_dust, config_no_dust]):
+    if config_dust == None:
+        halo_keys = ['no_dust']
+        configs = [config_no_dust]
+    else:
+        halo_keys = ['dust', 'no_dust']
+        configs = [config_dust, config_no_dust]
+    for key, config in enumerate(configs):
         
         sim = config.get_sim(simname)
         snaps = config.to_process[simname]
@@ -148,9 +153,11 @@ def construct_dataframe(dictionary, settings=['dust', 'no_dust'], name='f_esc.h5
             a_star.extend(a_star_elements)
             
         dataset = pd.DataFrame({'ID':all_IDs, 'z':redshifts, 
-                            'HaloMass':halo_masses, 'Metalicity':metal, 
+                            'HaloMass':halo_masses, 'Metallicity':metal, 
                             'FractionStars':rel_star_mass, 'FractionGas':rel_gas_mass,
                             'FractionDust':rel_dust_mass, 'Q0':Q0, 'aStar':a_star, 'f_esc':f_esc})
+        # Set f_esc to float64 instead of df object (not done automatically for some reason)
+        dataset = dataset.astype(dtype= {"f_esc":"float64"})
         store[setting] = dataset
     store.close()
     
@@ -170,11 +177,13 @@ def construct_freq_dataframe(dictionary, settings=['dust', 'no_dust'], name='fre
         Q0 = []
         a_star = []
         redshifts = []
+        halo_radii = []
         per_freq = []
         per_source = []
         emitted_photons = []
         escaped_photons = []
         frequencies = []
+        n_iterations = []
 
 
         for i,snapshot in enumerate(dictionary[setting].keys()):
@@ -186,6 +195,7 @@ def construct_freq_dataframe(dictionary, settings=['dust', 'no_dust'], name='fre
             emitted_photons_elements = []
             escaped_photons_elements = []
             frequencies_elements = []
+            n_iterations_elements = []
 
             input_df = dictionary[setting][snapshot]['df']
             for ID in IDs:
@@ -195,14 +205,16 @@ def construct_freq_dataframe(dictionary, settings=['dust', 'no_dust'], name='fre
                 emitted_photons_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['emitted_photons'])
                 escaped_photons_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['escaped_photons'])
                 frequencies_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['freqs'])
+                n_iterations_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['n_iterations'])
             
             group_mass_elements = input_df.loc[IDs, ('GroupMass',0)]
             metal_elements = input_df.loc[IDs, ('GroupStarMetallicity', 0)]#/1e-3
-            star_mass_elements = input_df.loc[IDs, ('M_star', 0)]#/1e-3
+            star_mass_elements = input_df.loc[IDs, ('GroupMassType', 4)]#/1e-3
             gas_elements = input_df.loc[IDs, ('gas_mass',0)]#/1e-1
             dust_mass_elements = input_df.loc[IDs, ('dust_mass',0)]#/1e-5
             Q0_elements = input_df.loc[IDs, ('Q_0',0)]#/1e53
             a_star_elements = input_df.loc[IDs, ('a_star',0)]#/1e8
+            halo_radii_elements = input_df.loc[IDs, ('Group_R_Crit200',0)]
 
             f_esc.extend(f_esc_elements)
             per_freq.extend(per_freq_elements)
@@ -219,16 +231,46 @@ def construct_freq_dataframe(dictionary, settings=['dust', 'no_dust'], name='fre
             Q0.extend(Q0_elements)
             a_star.extend(a_star_elements)
             frequencies.extend(frequencies_elements)
+            n_iterations.extend(n_iterations_elements)
+            halo_radii.extend(halo_radii_elements)
             
         dataset = pd.DataFrame({'ID':all_IDs, 'z':redshifts, 
-                            'HaloMass':halo_masses, 'Metalicity':metal, 
+                            'HaloMass':halo_masses, 'Metallicity':metal, 
                             'FractionStars':rel_star_mass, 'FractionGas':rel_gas_mass,
-                            'FractionDust':rel_dust_mass, 'Q0':Q0, 'aStar':a_star, 'f_esc':f_esc,
+                            'FractionDust':rel_dust_mass, 'Q0':Q0, 'aStar':a_star, 
+                            'HaloRadii':halo_radii, 'f_esc':f_esc,
                             'per_freq':per_freq, 'per_source':per_source, 'emitted_photons':emitted_photons, 
-                            'escaped_photons':escaped_photons, 'frequencies':frequencies})
+                            'escaped_photons':escaped_photons, 'frequencies':frequencies, 'n_iterations':n_iterations})
+        # Set f_esc to float64 instead of df object (not done automatically for some reason)
+        dataset = dataset.astype(dtype= {"f_esc":"float64"})
         store[setting] = dataset
     store.close()
 
+    return
+
+def build_fid_df(simname):
+    # load the config module for the fiducial 2 dust configuration
+    spec_dust = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/fid2d/config.py")
+    config_dust = importlib.util.module_from_spec(spec_dust)
+    spec_dust.loader.exec_module(config_dust)
+
+    # load the config module for the fiducial 2 no dust configuration
+    spec_no_dust = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/fid2/config.py")
+    config_no_dust = importlib.util.module_from_spec(spec_no_dust)
+    spec_no_dust.loader.exec_module(config_no_dust)
+
+    halos = construct_halo_dict(simname, config_no_dust, config_dust)
+    construct_freq_dataframe(dictionary=halos, name = 'df_f_esc_freq.h5')
+    return
+
+
+def build_full_esc_df(simname):
+    spec_no_dust = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/full_esc/config.py")
+    config_no_dust = importlib.util.module_from_spec(spec_no_dust)
+    spec_no_dust.loader.exec_module(config_no_dust)
+
+    halos = construct_halo_dict(simname, config_no_dust) #config_dust
+    construct_freq_dataframe(dictionary=halos, name = 'df_full_esc_freq.h5', settings=['no_dust'])
     return
 
 if __name__ == "__main__":
@@ -240,15 +282,4 @@ if __name__ == "__main__":
     j_to_erg = 1e7
     norm = 1e52
 
-    # load the config module for the fiducial 2 dust configuration
-    spec_dust = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/fid2d/config.py")
-    config_dust = importlib.util.module_from_spec(spec_dust)
-    spec_dust.loader.exec_module(config_dust)
-
-    # load the config module for the fiducial 2 no dust configuration
-    spec_no_dust = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/fid2/config.py")
-    config_no_dust = importlib.util.module_from_spec(spec_no_dust)
-    spec_no_dust.loader.exec_module(config_no_dust)
-
-    halos = construct_halo_dict(simname, config_dust, config_no_dust)
-    construct_freq_dataframe(dictionary=halos, name = 'df_f_esc_freq.h5')
+    build_fid_df(simname)
