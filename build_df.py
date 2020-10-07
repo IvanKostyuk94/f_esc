@@ -59,15 +59,15 @@ def construct_halo_dict(simname, config_no_dust, config_dust=None):
         halo_keys = ['no_dust']
         configs = [config_no_dust]
     else:
-        halo_keys = ['dust', 'no_dust']
-        configs = [config_dust, config_no_dust]
+        halo_keys = ['no_dust', 'dust']
+        configs = [config_no_dust, config_dust]
     for key, config in enumerate(configs):
         
         sim = config.get_sim(simname)
         snaps = config.to_process[simname]
         halos[halo_keys[key]] = {}
+        
         for snap in snaps:
-
             df = pd.read_pickle(config.selected_halo_df_file(simname, config.snap_name(snap)))
             df['csim_path', 0] = np.nan
             for i in range(config.n_rcs):
@@ -111,58 +111,6 @@ def construct_halo_dict(simname, config_no_dust, config_dust=None):
     return halos
 
 # Construct a dataframe 
-def construct_dataframe(dictionary, settings=['dust', 'no_dust'], name='f_esc.h5'):
-    store = pd.HDFStore(name,'w')
-
-    for setting in settings:
-        f_esc = []
-        halo_masses = []
-        metal = []
-        rel_star_mass = []
-        rel_gas_mass = []
-        rel_dust_mass = []
-        all_IDs = []
-        Q0 = []
-        a_star = []
-        redshifts = []
-        for i,snapshot in enumerate(dictionary[setting].keys()):
-            IDs = dictionary[setting][snapshot]['IDs']
-            
-            f_esc_elements = []
-            input_df = dictionary[setting][snapshot]['df']
-            for ID in IDs:
-                f_esc_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['cum'])
-            
-            group_mass_elements = input_df.loc[IDs, ('GroupMass',0)]
-            metal_elements = input_df.loc[IDs, ('GroupStarMetallicity', 0)]#/1e-3
-            star_mass_elements = input_df.loc[IDs, ('M_star', 0)]#/1e-3
-            gas_elements = input_df.loc[IDs, ('gas_mass',0)]#/1e-1
-            dust_mass_elements = input_df.loc[IDs, ('dust_mass',0)]#/1e-5
-            Q0_elements = input_df.loc[IDs, ('Q_0',0)]#/1e53
-            a_star_elements = input_df.loc[IDs, ('a_star',0)]#/1e8
-
-            f_esc.extend(f_esc_elements)
-            halo_masses.extend(group_mass_elements)
-            metal.extend(metal_elements)
-            rel_star_mass.extend(star_mass_elements/group_mass_elements)
-            rel_gas_mass.extend(gas_elements/group_mass_elements)
-            rel_dust_mass.extend(dust_mass_elements/group_mass_elements)
-            redshifts.extend(np.full(len(IDs),z[i]))
-            all_IDs.extend(IDs)
-            Q0.extend(Q0_elements)
-            a_star.extend(a_star_elements)
-            
-        dataset = pd.DataFrame({'ID':all_IDs, 'z':redshifts, 
-                            'HaloMass':halo_masses, 'Metallicity':metal, 
-                            'FractionStars':rel_star_mass, 'FractionGas':rel_gas_mass,
-                            'FractionDust':rel_dust_mass, 'Q0':Q0, 'aStar':a_star, 'f_esc':f_esc})
-        # Set f_esc to float64 instead of df object (not done automatically for some reason)
-        dataset = dataset.astype(dtype= {"f_esc":"float64"})
-        store[setting] = dataset
-    store.close()
-    
-    return 
-
 def construct_freq_dataframe(dictionary, settings=['dust', 'no_dust'], name='freq_f_esc'):
     store = pd.HDFStore(name,'w')
 
@@ -199,13 +147,13 @@ def construct_freq_dataframe(dictionary, settings=['dust', 'no_dust'], name='fre
 
             input_df = dictionary[setting][snapshot]['df']
             for ID in IDs:
-                f_esc_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['cum'])
-                per_freq_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['per_freq'])
-                per_source_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['per_source'])
-                emitted_photons_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['emitted_photons'])
-                escaped_photons_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['escaped_photons'])
-                frequencies_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['freqs'])
-                n_iterations_elements.append(input_df.loc[ID, ('f_esc',0)]['5.0e-2']['1.0e0']['n_iterations'])
+                f_esc_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['cum'])
+                per_freq_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['per_freq'])
+                per_source_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['per_source'])
+                emitted_photons_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['emitted_photons'])
+                escaped_photons_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['escaped_photons'])
+                frequencies_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['freqs'])
+                n_iterations_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['n_iterations'])
             
             group_mass_elements = input_df.loc[IDs, ('GroupMass',0)]
             metal_elements = input_df.loc[IDs, ('GroupStarMetallicity', 0)]#/1e-3
@@ -283,3 +231,4 @@ if __name__ == "__main__":
     norm = 1e52
 
     build_fid_df(simname)
+    build_full_esc_df(simname)
