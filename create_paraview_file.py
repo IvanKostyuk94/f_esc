@@ -8,7 +8,7 @@ def redshift_to_snap(redshift):
 def get_simulation_path(halo_id, conf, redshift):
     snap = redshift_to_snap(redshift)
     conf_dir = os.path.join('/ptmp/mpa/mglatzle/TNG_f_esc', conf)
-    simulation_path =  os.path.join(conf_dir, f'run//L35n2160TNG/{snap}/g{halo_id}/Output/phys_ic00_rt05.out')
+    simulation_path =  os.path.join(conf_dir, f'run/L35n2160TNG/{snap}/g{halo_id}/Output/phys_ic00_rt05.out')
     return simulation_path
 
 def create_vtr(halo_id, conf, redshift):

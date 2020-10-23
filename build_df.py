@@ -4,7 +4,9 @@ import pandas as pd
 import numpy as np
 import h5py
 import tables
+import os
 from crashpy.dataclasses.simulation import LoadedSimulation as Sim
+from crashpy.utilities import crashMemMap
 from get_spectrum import get_spectra
 
 """
@@ -53,14 +55,19 @@ def h5toDict(f):
 # dict of dicts, first level is TNG simulation, second level is simulation
 # snapshot. For each snapshot, load its header (key 'header') and a halo
 # dataframe (key 'df').
-def construct_halo_dict(simname, config_no_dust, config_dust=None):
+def construct_halo_dict(simname, configs, halo_keys = ['no_dust'], with_dust=False):
     halos = {}
-    if config_dust == None:
-        halo_keys = ['no_dust']
-        configs = [config_no_dust]
+    if not with_dust:
+        halo_keys = halo_keys
+        configs = configs
+        
     else:
         halo_keys = ['no_dust', 'dust']
-        configs = [config_no_dust, config_dust]
+        configs = configs
+
+    if not (len(halo_keys)==len(configs)):
+        raise ValueError(f'Length of halo_keys and configs has to be equal, received the shapes {len(halo_keys)} and {len(configs)} instead.')
+
     for key, config in enumerate(configs):
         
         sim = config.get_sim(simname)
@@ -111,10 +118,10 @@ def construct_halo_dict(simname, config_no_dust, config_dust=None):
     return halos
 
 # Construct a dataframe 
-def construct_freq_dataframe(dictionary, settings=['dust', 'no_dust'], name='freq_f_esc'):
+def construct_freq_dataframe(dictionary, configs, settings=['dust', 'no_dust'], name='freq_f_esc'):
     store = pd.HDFStore(name,'w')
 
-    for setting in settings:
+    for setting, config in zip(settings, configs):
         f_esc = []
         halo_masses = []
         metal = []
@@ -126,6 +133,11 @@ def construct_freq_dataframe(dictionary, settings=['dust', 'no_dust'], name='fre
         a_star = []
         redshifts = []
         halo_radii = []
+        Temperature = []
+        xHII = []
+        xHeII = []
+        xHeIII = []
+
         per_freq = []
         per_source = []
         emitted_photons = []
@@ -144,6 +156,10 @@ def construct_freq_dataframe(dictionary, settings=['dust', 'no_dust'], name='fre
             escaped_photons_elements = []
             frequencies_elements = []
             n_iterations_elements = []
+            Temperature_elements = []
+            xHII_elements = []
+            xHeII_elements = []
+            xHeIII_elements = []
 
             input_df = dictionary[setting][snapshot]['df']
             for ID in IDs:
@@ -154,6 +170,12 @@ def construct_freq_dataframe(dictionary, settings=['dust', 'no_dust'], name='fre
                 escaped_photons_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['escaped_photons'])
                 frequencies_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['freqs'])
                 n_iterations_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['n_iterations'])
+
+                average_quantities = get_average_quantities(ID, config, z[i])
+                Temperature_elements.append(average_quantities[0])
+                xHII_elements.append(average_quantities[1])
+                xHeII_elements.append(average_quantities[2])
+                xHeIII_elements.append(average_quantities[3])
             
             group_mass_elements = input_df.loc[IDs, ('GroupMass',0)]
             metal_elements = input_df.loc[IDs, ('GroupStarMetallicity', 0)]#/1e-3
@@ -181,12 +203,18 @@ def construct_freq_dataframe(dictionary, settings=['dust', 'no_dust'], name='fre
             frequencies.extend(frequencies_elements)
             n_iterations.extend(n_iterations_elements)
             halo_radii.extend(halo_radii_elements)
+            Temperature.extend(Temperature_elements)
+            xHII.extend(xHII_elements)
+            xHeII.extend(xHeII_elements)
+            xHeIII.extend(xHeIII_elements)
+
             
         dataset = pd.DataFrame({'ID':all_IDs, 'z':redshifts, 
                             'HaloMass':halo_masses, 'Metallicity':metal, 
                             'FractionStars':rel_star_mass, 'FractionGas':rel_gas_mass,
                             'FractionDust':rel_dust_mass, 'Q0':Q0, 'aStar':a_star, 
                             'HaloRadii':halo_radii, 'f_esc':f_esc,
+                            'Temperature': Temperature, 'xHII':xHII, 'xHeII':xHeII, 'xHeIII':xHeIII,
                             'per_freq':per_freq, 'per_source':per_source, 'emitted_photons':emitted_photons, 
                             'escaped_photons':escaped_photons, 'frequencies':frequencies, 'n_iterations':n_iterations})
         # Set f_esc to float64 instead of df object (not done automatically for some reason)
@@ -195,6 +223,29 @@ def construct_freq_dataframe(dictionary, settings=['dust', 'no_dust'], name='fre
     store.close()
 
     return
+
+def redshift_to_snap(redshift):
+    correspondense = {6:'sn013', 8:'sn008', 10:'sn004'}
+    return correspondense[redshift]
+
+def get_simulation_path(halo_id, conf, redshift):
+    snap = redshift_to_snap(redshift)
+    conf_dir = os.path.join('/ptmp/mpa/mglatzle/TNG_f_esc', conf)
+    simulation_path =  os.path.join(conf_dir, f'run/L35n2160TNG/{snap}/g{halo_id}/Output/phys_ic00_rt05.out')
+    return simulation_path
+
+def get_average_quantities(halo_id, conf, redshift):
+    path = get_simulation_path(halo_id, conf, redshift)
+    average_quantities = []
+    try:
+        halo = crashMemMap(path, 'all')
+        for i in range(4):
+            quantity = np.average(halo[i])
+            average_quantities.append(quantity)
+    except:
+        average_quantities = [np.nan, np.nan, np.nan, np.nan] 
+    return average_quantities
+
 
 def build_fid_df(simname):
     # load the config module for the fiducial 2 dust configuration
@@ -207,8 +258,33 @@ def build_fid_df(simname):
     config_no_dust = importlib.util.module_from_spec(spec_no_dust)
     spec_no_dust.loader.exec_module(config_no_dust)
 
-    halos = construct_halo_dict(simname, config_no_dust, config_dust)
-    construct_freq_dataframe(dictionary=halos, name = 'df_f_esc_freq.h5')
+    halos = construct_halo_dict(simname, [config_no_dust, config_dust])
+    construct_freq_dataframe(dictionary=halos, name = 'df_f_esc_freq.h5', configs = ['fid2', 'fid2d'])
+    return
+
+def build_div_esc(simname):
+    spec_0_3 = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/esc_3_e-1/config.py")
+    spec_0_5 = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/esc_5_e-1/config.py")
+    spec_0_7 = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/esc_7_e-1/config.py")
+    spec_1_0 = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/full_esc/config.py")
+    
+    config_0_3 = importlib.util.module_from_spec(spec_0_3)
+    config_0_5 = importlib.util.module_from_spec(spec_0_5)
+    config_0_7 = importlib.util.module_from_spec(spec_0_7)
+    config_1_0 = importlib.util.module_from_spec(spec_1_0)
+    
+    spec_0_3.loader.exec_module(config_0_3)
+    spec_0_5.loader.exec_module(config_0_5)
+    spec_0_7.loader.exec_module(config_0_7)
+    spec_1_0.loader.exec_module(config_1_0)
+
+    halo_keys = ['0.3','0.5','0.7','1.0']
+    configs = [config_0_3, config_0_5, config_0_7, config_1_0]
+
+    halos = construct_halo_dict(simname, configs=configs, halo_keys = halo_keys)
+    configs = ['esc_3_e-1','esc_5_e-1','esc_7_e-1','full_esc']
+    
+    construct_freq_dataframe(dictionary=halos, configs=configs, settings=halo_keys)
     return
 
 
@@ -218,7 +294,7 @@ def build_full_esc_df(simname):
     spec_no_dust.loader.exec_module(config_no_dust)
 
     halos = construct_halo_dict(simname, config_no_dust) #config_dust
-    construct_freq_dataframe(dictionary=halos, name = 'df_full_esc_freq.h5', settings=['no_dust'])
+    construct_freq_dataframe(dictionary=halos, name = 'df_full_esc_freq.h5', settings=['no_dust'],  configs = ['full_esc'])
     return
 
 if __name__ == "__main__":
@@ -230,5 +306,6 @@ if __name__ == "__main__":
     j_to_erg = 1e7
     norm = 1e52
 
-    build_fid_df(simname)
-    build_full_esc_df(simname)
+    #build_fid_df(simname)
+    build_div_esc(simname)
+    #build_full_esc_df(simname)
