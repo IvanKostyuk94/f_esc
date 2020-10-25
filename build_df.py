@@ -263,9 +263,9 @@ def build_fid_df(simname):
     return
 
 def build_div_esc(simname):
-    spec_0_3 = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/esc_3_e-1/config.py")
-    spec_0_5 = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/esc_5_e-1/config.py")
-    spec_0_7 = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/esc_7_e-1/config.py")
+    spec_0_3 = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/esc_3e-1/config.py")
+    spec_0_5 = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/esc_5e-1/config.py")
+    spec_0_7 = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/esc_7e-1/config.py")
     spec_1_0 = importlib.util.spec_from_file_location("module.name","/freya/ptmp/mpa/mglatzle/TNG_f_esc/full_esc/config.py")
     
     config_0_3 = importlib.util.module_from_spec(spec_0_3)
@@ -282,7 +282,7 @@ def build_div_esc(simname):
     configs = [config_0_3, config_0_5, config_0_7, config_1_0]
 
     halos = construct_halo_dict(simname, configs=configs, halo_keys = halo_keys)
-    configs = ['esc_3_e-1','esc_5_e-1','esc_7_e-1','full_esc']
+    configs = ['esc_3e-1','esc_5e-1','esc_7e-1','full_esc']
     
     construct_freq_dataframe(dictionary=halos, configs=configs, settings=halo_keys)
     return
