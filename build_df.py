@@ -66,7 +66,8 @@ def construct_halo_dict(simname, configs, halo_keys = ['no_dust'], with_dust=Fal
         configs = configs
 
     if not (len(halo_keys)==len(configs)):
-        raise ValueError(f'Length of halo_keys and configs has to be equal, received the shapes {len(halo_keys)} and {len(configs)} instead.')
+        error_message = f'Length of halo_keys and configs has to be equal, received the shapes {len(halo_keys)} and {len(configs)} instead.' 
+        raise ValueError(error_message)
 
     for key, config in enumerate(configs):
         
@@ -258,7 +259,7 @@ def build_fid_df(simname):
     config_no_dust = importlib.util.module_from_spec(spec_no_dust)
     spec_no_dust.loader.exec_module(config_no_dust)
 
-    halos = construct_halo_dict(simname, [config_no_dust, config_dust])
+    halos = construct_halo_dict(simname, [config_no_dust, config_dust], with_dust=True)
     construct_freq_dataframe(dictionary=halos, name = 'df_f_esc_freq.h5', configs = ['fid2', 'fid2d'])
     return
 
@@ -284,7 +285,7 @@ def build_div_esc(simname):
     halos = construct_halo_dict(simname, configs=configs, halo_keys = halo_keys)
     configs = ['esc_3e-1','esc_5e-1','esc_7e-1','full_esc']
     
-    construct_freq_dataframe(dictionary=halos, configs=configs, settings=halo_keys)
+    construct_freq_dataframe(dictionary=halos, name = 'var_esc.h5', configs=configs, settings=halo_keys)
     return
 
 
@@ -306,6 +307,6 @@ if __name__ == "__main__":
     j_to_erg = 1e7
     norm = 1e52
 
-    #build_fid_df(simname)
-    build_div_esc(simname)
+    build_fid_df(simname)
+    #build_div_esc(simname)
     #build_full_esc_df(simname)
