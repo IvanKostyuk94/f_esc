@@ -8,16 +8,48 @@ import pickle
 from matplotlib.colors import Normalize
 import illustris_python as il
 
-basePath = '/virgo/simulations/IllustrisTNG/L35n2160TNG/output'
-h = 0.6774
-def build_star_mass_df():
-    stars_6 = il.snapshot.loadSubset(basePath, 13, 'stars', fields=['ParticleIDs', 'Masses'])
-    stars_8 = il.snapshot.loadSubset(basePath, 8, 'stars', fields=['ParticleIDs', 'Masses'])
-    stars_10 = il.snapshot.loadSubset(basePath, 4, 'stars', fields=['ParticleIDs', 'Masses'])
+from astropy.cosmology import FlatLambdaCDM
+cosmo = FlatLambdaCDM(H0=67.74, Om0=0.3089, Ob0=0.0486, Tcmb0=2.725)
+
+def lum_str_to_float(string):
+    string = string.replace('d', 'e')
+    return float(string)
+
+def redshift_to_snap(redshift):
+    snapnames = {6:'sn013', 8:'sn008', 10:'sn004'}
+    return snapnames[redshift]
+
+def scale_to_red(a):
+    return 1/a-1
+
+def star_ages(ID, redshift, conf, star_df):
+    snap = redshift_to_snap(redshift)
+    path_sources = f'/ptmp/mpa/mglatzle/TNG_f_esc/{conf}/run/L35n2160TNG/{snap}/g{ID}/Input/sources_ic00.in'
     
-    stars_6_df = pd.DataFrame({'mass':stars_6['Masses']}, index=stars_6['ParticleIDs'])
-    stars_8_df = pd.DataFrame({'mass':stars_8['Masses']}, index=stars_8['ParticleIDs'])
-    stars_10_df = pd.DataFrame({'mass':stars_10['Masses']}, index=stars_10['ParticleIDs'])
+    star_ID_names = pd.read_csv(path_sources, delim_whitespace=True, header=None, usecols=[4])
+    star_IDs = star_ID_names[4].apply(lambda element: int(element[1:-5]))
+
+    a_formation = star_df.loc[star_IDs]['formation']
+    z_formation = scale_to_red(a_formation)
+    ages = (cosmo.age(redshift).value-cosmo.age(z_formation).value+0.005)*1000
+    return ages
+
+def add_age(df, conf, star_dic):
+    ages = []
+    for index, row in df.iterrows():
+        age = star_ages(ID=row.ID, redshift=row.z, conf=conf, star_df=star_dic[row.z])
+        ages.append(age)
+    df['StellarAges'] = pd.Series(ages)
+    return
+
+def build_star_mass_df(basePath):
+    stars_6 = il.snapshot.loadSubset(basePath, 13, 'stars', fields=['ParticleIDs', 'Masses', 'GFM_StellarFormationTime'])
+    stars_8 = il.snapshot.loadSubset(basePath, 8, 'stars', fields=['ParticleIDs', 'Masses', 'GFM_StellarFormationTime'])
+    stars_10 = il.snapshot.loadSubset(basePath, 4, 'stars', fields=['ParticleIDs', 'Masses', 'GFM_StellarFormationTime'])
+    
+    stars_6_df = pd.DataFrame({'mass':stars_6['Masses'],'formation':stars_6['GFM_StellarFormationTime']}, index=stars_6['ParticleIDs'])
+    stars_8_df = pd.DataFrame({'mass':stars_8['Masses'], 'formation':stars_8['GFM_StellarFormationTime']}, index=stars_8['ParticleIDs'])
+    stars_10_df = pd.DataFrame({'mass':stars_10['Masses'], 'formation':stars_10['GFM_StellarFormationTime']}, index=stars_10['ParticleIDs'])
     
     stars_6_df.sort_index(inplace=True)
     stars_8_df.sort_index(inplace=True)
@@ -83,10 +115,9 @@ def get_average_quantities(halo_id, conf, redshift, df_star_masses):
     sigma_star_gal = star_mass_in_gal/(np.pi*r_gal**2)
     return (c_gal, sigma_gas_gal, sigma_star_gal)
 
-with open('star_masses.pickle', 'rb') as handle:
-    star_masses = pickle.load(handle)
-
-def update_df(df_name, name_star_mass_dic, new_df_name, conf='fid2'):
+def update_df(df_name, name_star_mass_dic=None, new_df_name=None, conf='fid2'):
+    if new_df_name == None:
+        new_df_name = df_name.split('.')[0]+'_updated.pickle'
     with open('star_masses.pickle', 'rb') as handle:
         star_masses = pickle.load(handle)
 
@@ -108,14 +139,39 @@ def update_df(df_name, name_star_mass_dic, new_df_name, conf='fid2'):
     df['clump_gas'] = gal_clump
     df['sigma_gas_gal'] = surface_gas_gal
     df['sigma_star_gal'] = surface_star_gal
+    add_age(df, conf=conf, star_dic=star_masses)
     
     df.to_pickle(new_df_name)
     return
 
-df_name = 'df_no_dust_ages.pickle'
-name_star_mass_dic = 'star_masses.pickle'
-new_df_name = 'df_no_dust_updated.pickle'
-update_df(df_name, name_star_mass_dic, new_df_name)
+if __name__ == "__main__":
+    path_to_data = '/u/ivkos/analysis/dfs/data'
+    basePath = '/virgo/simulations/IllustrisTNG/L35n2160TNG/output'
+    basePath_2 = '/virgo/simulations/IllustrisTNG/L35n1080TNG/output'
+    basePath_3 = '/virgo/simulations/IllustrisTNG/L35n540TNG/output'
+
+    mass_tng = build_star_mass_df(basePath)
+    path_to_dump = os.path.join(path_to_data, 'star_masses.pickle')
+    with open(path_to_dump, 'wb') as handle:
+        pickle.dump(mass_tng, handle)
+
+    mass_tng2 = build_star_mass_df(basePath_2)
+    path_to_dump2 = os.path.join(path_to_data, 'star_masses_tng2.pickle')
+    with open(path_to_dump2, 'wb') as handle:
+        pickle.dump(mass_tng2, handle)
+
+    mass_tng3 = build_star_mass_df(basePath_3)
+    path_to_dump3 = os.path.join(path_to_data, 'star_masses_tng3.pickle')
+    with open(path_to_dump3, 'wb') as handle:
+        pickle.dump(mass_tng3, handle)
+
+
+    # h = 0.6774
+
+    # df_name = 'df_no_dust_ages.pickle'
+    # name_star_mass_dic = 'star_masses.pickle'
+    # new_df_name = 'df_no_dust_updated.pickle'
+    # update_df(df_name, name_star_mass_dic, new_df_name)
 
 
 
