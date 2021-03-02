@@ -100,14 +100,24 @@ def construct_halo_dict(simname, config):
             df['f_esc', i] = np.nan
 
         # Begin insert for testing
-        counter = 0 
+        # counter = 0 
         # End insert for testing
-        for ID in config.completed_haloIDs(simname, config.snap_name(snap)):
+        
+        # Begin patch only consider IDs actually included
+        IDs_used = []
+        # End patch
+        
+        completed_IDs = config.completed_haloIDs(simname, config.snap_name(snap))
+        
+        for ID in completed_IDs:
             # Begin insert for testing
-            counter += 1
-            if counter > 10:
-               continue
+            # counter += 1
+            # if counter > 10:
+            #    continue
             # End insert for testing
+            # Begin patch only consider IDs actually included
+            IDs_used.append(ID)
+            # End patch
 
             rundir = config.rundir(simname, config.snap_name(snap), config.halo_name(ID))
             df.loc[ID, 'csim_path'] = rundir
@@ -127,6 +137,9 @@ def construct_halo_dict(simname, config):
             try:
                 df.loc[ID, 'f_esc'] = np.array(ls)
             except:
+                # This is a temporary patch since not all halo IDs have the f_esc calculated yet
+                IDs_used.remove(ID)
+                #completed_IDs.remove(ID)
                 print(f'Could not load the output of {ID}')
                 print(f'Located at: {rundir}')
 
@@ -134,7 +147,9 @@ def construct_halo_dict(simname, config):
 
         dic['header'] = sim.snap_cat[snap].header
         dic['df'] = df
-        finished_IDs = config.completed_haloIDs(simname, config.snap_name(snap))
+        #finished_IDs = completed_IDs
+        # This is only used until f_esc is finished
+        finished_IDs = IDs_used
         dic['IDs'] = np.array(finished_IDs)
 
         halos[config.snap_name(snap)] = dic 
@@ -142,7 +157,7 @@ def construct_halo_dict(simname, config):
     return halos
 
 # Construct a dataframe 
-def construct_freq_dataframe(dictionary, config, name='freq_f_esc', fesc_galaxy=False):
+def construct_freq_dataframe(dictionary, config, name, simname, fesc_galaxy=False):
     # Be careful with the hard coded redshifts 
     z = [6,8,10]
     
@@ -217,7 +232,7 @@ def construct_freq_dataframe(dictionary, config, name='freq_f_esc', fesc_galaxy=
         input_df = dictionary[snapshot]['df']
 
         # begin test
-        IDs = IDs[:9]
+        # IDs = IDs[:9]
         # end test
         for ID in IDs:
             f_esc_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['cum'])
@@ -227,7 +242,7 @@ def construct_freq_dataframe(dictionary, config, name='freq_f_esc', fesc_galaxy=
             escaped_photons_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['escaped_photons'])
             frequencies_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['freqs'])
             n_iterations_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['n_iterations'])
-            
+
             if fesc_galaxy:
                 f_esc_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['cum'])
                 per_freq_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['per_freq'])
@@ -237,7 +252,7 @@ def construct_freq_dataframe(dictionary, config, name='freq_f_esc', fesc_galaxy=
                 frequencies_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['freqs'])
                 n_iterations_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['n_iterations'])
 
-            average_quantities = get_average_quantities(ID, config, z[i])
+            average_quantities = get_average_quantities(ID, config, z[i], simname)
             Temperature_elements.append(average_quantities[0])
             xHII_elements.append(average_quantities[1])
             xHeII_elements.append(average_quantities[2])
@@ -250,7 +265,7 @@ def construct_freq_dataframe(dictionary, config, name='freq_f_esc', fesc_galaxy=
         metal_elements = input_df.loc[IDs, ('GroupStarMetallicity', 0)]#/1e-3
         star_mass_elements = input_df.loc[IDs, ('GroupMassType', 4)]#/1e-3
         gas_elements = input_df.loc[IDs, ('gas_mass',0)]#/1e-1
-        dust_mass_elements = input_df.loc[IDs, ('dust_mass')]#/1e-5
+        dust_mass_elements = input_df.loc[IDs, ('dust_mass', 0)]#/1e-5
         Q0_elements = input_df.loc[IDs, ('Q_0',0)]#/1e53
         halo_radii_elements = input_df.loc[IDs, ('Group_R_Crit200',0)]
         bh_mass_elements = input_df.loc[IDs, ('GroupBHMass', 0)]
@@ -307,16 +322,56 @@ def construct_freq_dataframe(dictionary, config, name='freq_f_esc', fesc_galaxy=
                             'per_freq_0_2':per_freq_0_2, 'per_source_0_2':per_source_0_2, 'emitted_photons_0_2':emitted_photons_0_2, 
                             'escaped_photons_0_2':escaped_photons_0_2, 'frequencies_0_2':frequencies_0_2, 'n_iterations_0_2':n_iterations_0_2})
     else:
-        dataset = pd.DataFrame({'ID':all_IDs, 'z':redshifts, 
-                            'HaloMass':halo_masses, 'Metallicity':metal, 
-                            'FractionStars':rel_star_mass, 'FractionGas':rel_gas_mass,
-                            'FractionDust':rel_dust_mass, 'Q0':Q0, 
-                            'HaloRadii':halo_radii, 'f_esc':f_esc,
-                            'Temperature': Temperature, 'xHII':xHII, 'xHeII':xHeII, 'xHeIII':xHeIII, 'GridSize':grid_size,
-                            'BHMass':bh_mass, 'BHGrowth':bh_growth, 'SFR':sfr,
-                            'density':density, 'clumping':clumping,
-                            'per_freq':per_freq, 'per_source':per_source, 'emitted_photons':emitted_photons, 
-                            'escaped_photons':escaped_photons, 'frequencies':frequencies, 'n_iterations':n_iterations})
+        try:
+            dataset = pd.DataFrame({'ID':all_IDs, 'z':redshifts, 
+                                'HaloMass':halo_masses, 'Metallicity':metal, 
+                                'FractionStars':rel_star_mass, 'FractionGas':rel_gas_mass,
+                                'FractionDust':rel_dust_mass, 'Q0':Q0, 
+                                'HaloRadii':halo_radii, 'f_esc':f_esc,
+                                'Temperature': Temperature, 'xHII':xHII, 'xHeII':xHeII, 'xHeIII':xHeIII, 'GridSize':grid_size,
+                                'BHMass':bh_mass, 'BHGrowth':bh_growth, 'SFR':sfr,
+                                'density':density, 'clumping':clumping,
+                                'per_freq':per_freq, 'per_source':per_source, 'emitted_photons':emitted_photons, 
+                                'escaped_photons':escaped_photons, 'frequencies':frequencies, 'n_iterations':n_iterations})
+        except:
+            print(f'ID: {len(all_IDs)}')
+            print(f'z: {len(redshifts)}')
+
+            print(f'HaloMass: {len(halo_masses)}')
+            print(f'Metalicity: {len(metal)}')
+            
+            print(f'FractionStars: {len(rel_star_mass)}')
+            print(f'FractionGas: {len(rel_gas_mass)}')
+            
+            print(f'FractionDust: {len(rel_dust_mass)}')
+            print(f'Q0: {len(Q0)}')
+
+            print(f'HaloRadii: {len(halo_radii)}')
+            print(f'f_esc: {len(f_esc)}')
+            
+            print(f'Temperature: {len(Temperature)}')
+            print(f'xHII: {len(xHII)}')
+            print(f'xHeII: {len(xHeII)}')
+            print(f'xHeIII: {len(xHeIII)}')
+            print(f'GridSize:{len(grid_size)}')
+
+            print(f'BHMass: {len(bh_mass)}')
+            print(f'BHGrowth: {len(bh_growth)}')
+            print(f'SFR: {len(sfr)}')
+            
+            print(f'density: {len(density)}')
+            print(f'clumping: {len(clumping)}')
+
+            print(f'per_freq: {len(per_freq)}')
+            print(f'per_source: {len(per_source)}')
+            print(f'emitted_photons: {len(emitted_photons)}')
+            
+            print(f'escaped_photons: {len(escaped_photons)}')
+            print(f'frequencies: {len(frequencies)}')
+            print(f'n_iterations: {len(n_iterations)}')
+            exit()
+
+
     # Set f_esc to float64 instead of df object (not done automatically for some reason)
     dataset = dataset.astype(dtype = {"f_esc":"float64"})
     if fesc_galaxy:
@@ -330,11 +385,11 @@ def redshift_to_snap(redshift):
     correspondense = {6:'sn013', 8:'sn008', 10:'sn004'}
     return correspondense[redshift]
 
-def get_simulation_path(halo_id, conf, redshift):
+def get_simulation_path(halo_id, conf, redshift, simname):
     snap = redshift_to_snap(redshift)
     conf_dir = os.path.join('/ptmp/mpa/mglatzle/TNG_f_esc', conf)
-    simulation_path =  os.path.join(conf_dir, f'run/L35n2160TNG/{snap}/g{halo_id}/Output/phys_ic00_rt05.out')
-    density_path = os.path.join(conf_dir, f'run/L35n2160TNG/{snap}/g{halo_id}/Input/dens_ic00.in')
+    simulation_path =  os.path.join(conf_dir, f'run/{simname}/{snap}/g{halo_id}/Output/phys_ic00_rt05.out')
+    density_path = os.path.join(conf_dir, f'run/{simname}/{snap}/g{halo_id}/Input/dens_ic00.in')
     return simulation_path, density_path
 
 
@@ -343,8 +398,8 @@ def clumping_factor(density_map):
     C = np.sum(np.square(density_map))*volume/(np.sum(density_map)**2)
     return C
 
-def get_average_quantities(halo_id, conf, redshift):
-    path_sim, path_dens = get_simulation_path(halo_id, conf, redshift)
+def get_average_quantities(halo_id, conf, redshift, simname):
+    path_sim, path_dens = get_simulation_path(halo_id, conf, redshift, simname)
     dens = crashMemMap(path_dens, 'all')[0]
     average_quantities = []
     try:
@@ -384,8 +439,22 @@ def build_df(run_names=['fid2'], filename=None, simname='L35n2160TNG', fesc_gala
         print('Finished buiding halo dictionary')
         print('Constructing halo dataframe')
         # Note here 'configs' corresponds to the names of the runs and not to the config object as above
-        construct_freq_dataframe(dictionary=halos, name=outputpath, config=run_name, fesc_galaxy=fesc_galaxy)
+        construct_freq_dataframe(dictionary=halos, name=outputpath, config=run_name, simname=simname, fesc_galaxy=fesc_galaxy)
     return
+
+if __name__ == "__main__":
+
+    simname_tng = 'L35n2160TNG'
+    all_runs_tng = ['fid2', 'fid2d', 'esc_3e-1', 'esc_5e-1', 'esc_7e-1', 'full_esc', 'large_radii', 'numerical_1e4', 'numerical_1e6', 'TNG50_2', 'TNG50_3'] 
+
+    simname_tng2 = 'L35n1080TNG'
+    all_runs_tng = ['TNG50_2'] 
+
+    simname_tng3 = 'L35n540TNG'
+    all_runs_tng = ['TNG50_3'] 
+
+    build_df(run_names=['fid2d'], filename=None, simname=simname_tng, fesc_galaxy=False)
+
 
 # Currently not working
 # def build_fid_df(simname, name='df_f_esc_freq.h5'):
@@ -439,17 +508,3 @@ def build_df(run_names=['fid2'], filename=None, simname='L35n2160TNG', fesc_gala
 #     construct_freq_dataframe(dictionary=halos, name = name, settings=['no_dust'],  configs = ['full_esc'])
 #     return
 
-if __name__ == "__main__":
-
-    simname_tng = 'L35n2160TNG'
-    all_runs_tng = ['fid2', 'fid2d', 'esc_3e-1', 'esc_5e-1', 'esc_7e-1', 'full_esc', 'large_radii', 'numerical_1e4', 'numerical_1e6', 'TNG50_2', 'TNG50_3'] 
-
-    simname_tng2 = 'L35n1080TNG'
-    all_runs_tng = ['TNG50_2'] 
-
-    simname_tng3 = 'L35n540TNG'
-    all_runs_tng = ['TNG50_3'] 
-
-    build_df(run_names=['fid2'], filename='just_testing', simname=simname_tng, fesc_galaxy=False)
-    #build_div_esc(simname)
-    #build_full_esc_df(simname)

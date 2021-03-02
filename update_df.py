@@ -116,12 +116,21 @@ def get_average_quantities(halo_id, conf, redshift, df_star_masses):
     return (c_gal, sigma_gas_gal, sigma_star_gal)
 
 def update_df(df_name, name_star_mass_dic=None, new_df_name=None, conf='fid2'):
+    path_to_data = '/u/ivkos/analysis/dfs/data'
+    path_to_dfs = '/u/ivkos/analysis/dfs'
+    
     if new_df_name == None:
         new_df_name = df_name.split('.')[0]+'_updated.pickle'
-    with open('star_masses.pickle', 'rb') as handle:
+    path_to_df = os.path.join(path_to_dfs, df_name)
+    path_to_new_df = os.path.join(path_to_dfs, new_df_name)
+    
+    if name_star_mass_dic == None:
+        name_star_mass_dic = 'star_masses.pickle'
+    path_star_masses = os.path.join(path_to_data, name_star_mass_dic)
+    with open(path_star_masses, 'rb') as handle:
         star_masses = pickle.load(handle)
 
-    df = pd.read_pickle(df_name)
+    df = pd.read_pickle(path_to_df)
     gal_clump = []
     surface_gas_gal = []
     surface_star_gal = []
@@ -141,7 +150,7 @@ def update_df(df_name, name_star_mass_dic=None, new_df_name=None, conf='fid2'):
     df['sigma_star_gal'] = surface_star_gal
     add_age(df, conf=conf, star_dic=star_masses)
     
-    df.to_pickle(new_df_name)
+    df.to_pickle(path_to_new_df)
     return
 
 if __name__ == "__main__":
@@ -150,28 +159,29 @@ if __name__ == "__main__":
     basePath_2 = '/virgo/simulations/IllustrisTNG/L35n1080TNG/output'
     basePath_3 = '/virgo/simulations/IllustrisTNG/L35n540TNG/output'
 
-    mass_tng = build_star_mass_df(basePath)
-    path_to_dump = os.path.join(path_to_data, 'star_masses.pickle')
-    with open(path_to_dump, 'wb') as handle:
-        pickle.dump(mass_tng, handle)
+    # mass_tng = build_star_mass_df(basePath)
+    # path_to_dump = os.path.join(path_to_data, 'star_masses.pickle')
+    # with open(path_to_dump, 'wb') as handle:
+    #     pickle.dump(mass_tng, handle)
 
-    mass_tng2 = build_star_mass_df(basePath_2)
-    path_to_dump2 = os.path.join(path_to_data, 'star_masses_tng2.pickle')
-    with open(path_to_dump2, 'wb') as handle:
-        pickle.dump(mass_tng2, handle)
+    # mass_tng2 = build_star_mass_df(basePath_2)
+    # path_to_dump2 = os.path.join(path_to_data, 'star_masses_tng2.pickle')
+    # with open(path_to_dump2, 'wb') as handle:
+    #     pickle.dump(mass_tng2, handle)
 
-    mass_tng3 = build_star_mass_df(basePath_3)
-    path_to_dump3 = os.path.join(path_to_data, 'star_masses_tng3.pickle')
-    with open(path_to_dump3, 'wb') as handle:
-        pickle.dump(mass_tng3, handle)
+    # mass_tng3 = build_star_mass_df(basePath_3)
+    # path_to_dump3 = os.path.join(path_to_data, 'star_masses_tng3.pickle')
+    # with open(path_to_dump3, 'wb') as handle:
+    #     pickle.dump(mass_tng3, handle)
 
 
-    # h = 0.6774
+    h = 0.6774
 
-    # df_name = 'df_no_dust_ages.pickle'
-    # name_star_mass_dic = 'star_masses.pickle'
-    # new_df_name = 'df_no_dust_updated.pickle'
-    # update_df(df_name, name_star_mass_dic, new_df_name)
+    df_name = 'fid2.pickle'
+    name_star_mass_dic = 'star_masses.pickle'
+    new_df_name = 'df_no_dust_updated.pickle'
+    conf = 'fid2'
+    update_df(df_name, name_star_mass_dic=None, new_df_name=None, conf=conf)
 
 
 
