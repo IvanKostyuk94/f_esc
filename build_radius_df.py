@@ -161,8 +161,8 @@ def construct_freq_dataframe(dictionary, config, name, simname, fesc_galaxy=Fals
     # Be careful with the hard coded redshifts 
     z = [6,8,10]
     f_esc_radii = {0.2:{}, 0.3:{}, 0.4:{}, 0.5:{}, 0.6:{}, 0.7:{}, 0.8:{}, 0.9:{}, 1.0:{}, 1.1:{}, 1.2:{}, 1.3:{}, 1.4:{}, 1.5:{}}
-    f_esc_notation = {0.2:'2.0e-1', 0.3:'3.0e-1', 0.4:'4.0e-1', 0.5:'5.0e-1', 0.6:'6.0e-1', 0.7:'7.0e-1', 
-    0.8:'8.0e-1', 0.9:'9.0e-1', 1.0:'1.0e0', 1.1:'1.1e0', 1.2:'1.2e0', 1.3:'1.3e0', 1.4:'1.4e0', 1.5:'1.5e0'}
+    f_esc_notation = {0.2:'1.3e-1', 0.3:'2.0e-1', 0.4:'2.7e-1', 0.5:'3.3e-1', 0.6:'4.0e-1', 0.7:'4.7e-1', 
+    0.8:'5.3e-1', 0.9:'6.0e-1', 1.0:'6.7e-1', 1.1:'7.3e-1', 1.2:'8.0e-1', 1.3:'8.7e-1', 1.4:'9.3e-1', 1.5:'1.0e0'}
     
     print(f'Working on dataframe for setting {config}')
     for key in f_esc_radii:

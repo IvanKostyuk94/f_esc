@@ -236,22 +236,42 @@ def construct_freq_dataframe(dictionary, config, name, simname, fesc_galaxy=Fals
         # IDs = IDs[:9]
         # end test
         for ID in IDs:
-            f_esc_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['cum'])
-            per_freq_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['per_freq'])
-            per_source_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['per_source'])
-            emitted_photons_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['emitted_photons'])
-            escaped_photons_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['escaped_photons'])
-            frequencies_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['freqs'])
-            n_iterations_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['n_iterations'])
+            try:
+                f_esc_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['cum'])
+                per_freq_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['per_freq'])
+                per_source_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['per_source'])
+                emitted_photons_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['emitted_photons'])
+                escaped_photons_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['escaped_photons'])
+                frequencies_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['freqs'])
+                n_iterations_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['n_iterations'])
 
-            if fesc_galaxy:
-                f_esc_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['cum'])
-                per_freq_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['per_freq'])
-                per_source_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['per_source'])
-                emitted_photons_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['emitted_photons'])
-                escaped_photons_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['escaped_photons'])
-                frequencies_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['freqs'])
-                n_iterations_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['n_iterations'])
+                if fesc_galaxy:
+                    f_esc_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['cum'])
+                    per_freq_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['per_freq'])
+                    per_source_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['per_source'])
+                    emitted_photons_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['emitted_photons'])
+                    escaped_photons_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['escaped_photons'])
+                    frequencies_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['freqs'])
+                    n_iterations_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['n_iterations'])
+
+            except:
+                f_esc_elements.append(np.NaN)
+                per_freq_elements.append(np.NaN)
+                per_source_elements.append(np.NaN)
+                emitted_photons_elements.append(np.NaN)
+                escaped_photons_elements.append(np.NaN)
+                frequencies_elements.append(np.NaN)
+                n_iterations_elements.append(np.NaN)
+
+                if fesc_galaxy:
+                    f_esc_elements_0_2.append(np.NaN)
+                    per_freq_elements_0_2.append(np.NaN)
+                    per_source_elements_0_2.append(np.NaN)
+                    emitted_photons_elements_0_2.append(np.NaN)
+                    escaped_photons_elements_0_2.append(np.NaN)
+                    frequencies_elements_0_2.append(np.NaN)
+                    n_iterations_elements_0_2.append(np.NaN)
+
 
             average_quantities = get_average_quantities(ID, config, z[i], simname)
             Temperature_elements.append(average_quantities[0])
@@ -448,7 +468,7 @@ def build_df(run_names=['fid2'], filename=None, simname='L35n2160TNG', fesc_gala
 if __name__ == "__main__":
 
     simname_tng = 'L35n2160TNG'
-    all_runs_tng = ['fid2', 'fid2d', 'esc_3e-1', 'esc_5e-1', 'esc_7e-1', 'full_esc', 'large_radii', 'numerical_1e4', 'numerical_1e6', 'TNG50_2', 'TNG50_3'] 
+    all_runs_tng = ['fid2', 'fid2d', 'esc_3e-1', 'esc_5e-1', 'esc_7e-1', 'full_esc', 'large_radii', 'numerical_1e4', 'numerical_1e6', 'new_numerical_1e6', 'new_numerical_5e6', 'TNG50_2', 'TNG50_3'] 
 
     simname_tng2 = 'L35n1080TNG'
     all_runs_tng = ['TNG50_2'] 
@@ -456,7 +476,7 @@ if __name__ == "__main__":
     simname_tng3 = 'L35n540TNG'
     all_runs_tng = ['TNG50_3'] 
 
-    build_df(run_names=['fid2d'], filename=None, simname=simname_tng, fesc_galaxy=False)
+    build_df(run_names=['full_esc'], filename=None, simname=simname_tng, fesc_galaxy=True)
 
 
 # Currently not working
