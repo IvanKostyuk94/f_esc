@@ -31,12 +31,21 @@ def star_ages(ID, redshift, conf, star_df):
     return ages
 
 def add_age(df, conf, star_dic):
-    ages = []
+    #ages = []
     for index, row in df.iterrows():
         print(f'Working on Halo {row.ID} at redhshift {row.z}')
-        age = star_ages(ID=row.ID, redshift=row.z, conf=conf, star_df=star_dic[row.z])
-        ages.append(age)
-    df['StellarAges'] = pd.Series(ages)
+        
+        try:
+            if len(row.StellarAges) != len(row.per_source):
+                age = star_ages(ID=row.ID, redshift=row.z, conf=conf, star_df=star_dic[row.z])
+                df.StellarAges[index] = age
+                print(f'Correction at {index} per_source: {len(row.per_source)}, stellar ages:{len(row.StellarAges)}')
+        except:
+            age = star_ages(ID=row.ID, redshift=row.z, conf=conf, star_df=star_dic[row.z])
+            df.StellarAges[index] = age
+            print(f'Correction at {index} per_source: {len(row.per_source)}, stellar ages:{len(row.StellarAges)}')
+
+    #df['StellarAges'] = pd.Series(ages)
     return
 
 df_path = 'dfs/full_esc_updated.pickle'

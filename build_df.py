@@ -134,14 +134,14 @@ def construct_halo_dict(simname, config):
                     ls.append(fesc)
                 except:
                     pass
-            try:
-                df.loc[ID, 'f_esc'] = np.array(ls)
-            except:
-                # This is a temporary patch since not all halo IDs have the f_esc calculated yet
-                IDs_used.remove(ID)
-                #completed_IDs.remove(ID)
-                print(f'Could not load the output of {ID}')
-                print(f'Located at: {rundir}')
+            #try:
+            df.loc[ID, ('f_esc', 4)] = np.array(ls)
+            # except:
+            #     # This is a temporary patch since not all halo IDs have the f_esc calculated yet
+            #     IDs_used.remove(ID)
+            #     #completed_IDs.remove(ID)
+            #     print(f'Could not load the output of {ID}')
+            #     print(f'Located at: {rundir}')
 
         dic = {}
 
@@ -159,7 +159,7 @@ def construct_halo_dict(simname, config):
 # Construct a dataframe 
 def construct_freq_dataframe(dictionary, config, name, simname, fesc_galaxy=False):
     # Be careful with the hard coded redshifts 
-    z = [6,8,10]
+    z = {'sn013':6,'sn008':8,'sn004':10}
     
     print(f'Working on dataframe for setting {config}')
     
@@ -170,7 +170,8 @@ def construct_freq_dataframe(dictionary, config, name, simname, fesc_galaxy=Fals
     gas_metal = []
     rel_star_mass = []
     rel_gas_mass = []
-    rel_dust_mass = []
+    gas_mass_grid = []
+    dust_mass = []
     all_IDs = []
     Q0 = []
     redshifts = []
@@ -273,7 +274,7 @@ def construct_freq_dataframe(dictionary, config, name, simname, fesc_galaxy=Fals
                     n_iterations_elements_0_2.append(np.NaN)
 
 
-            average_quantities = get_average_quantities(ID, config, z[i], simname)
+            average_quantities = get_average_quantities(ID, config, z[snapshot], simname)
             Temperature_elements.append(average_quantities[0])
             xHII_elements.append(average_quantities[1])
             xHeII_elements.append(average_quantities[2])
@@ -286,7 +287,8 @@ def construct_freq_dataframe(dictionary, config, name, simname, fesc_galaxy=Fals
         metal_elements = input_df.loc[IDs, ('GroupStarMetallicity', 0)]#/1e-3
         metal_gas_elements = input_df.loc[IDs, ('GroupGasMetallicity', 0)]
         star_mass_elements = input_df.loc[IDs, ('GroupMassType', 4)]#/1e-3
-        gas_elements = input_df.loc[IDs, ('gas_mass',0)]#/1e-1
+        gas_elements_halo = input_df.loc[IDs, ('GroupMassType', 0)]#/1e-1
+        gas_elements_grid = input_df.loc[IDs, ('gas_mass',0)]#/1e-1
         dust_mass_elements = input_df.loc[IDs, ('dust_mass', 0)]#/1e-5
         Q0_elements = input_df.loc[IDs, ('Q_0',0)]#/1e53
         halo_radii_elements = input_df.loc[IDs, ('Group_R_Crit200',0)]
@@ -314,9 +316,10 @@ def construct_freq_dataframe(dictionary, config, name, simname, fesc_galaxy=Fals
         metal.extend(metal_elements)
         gas_metal.extend(metal_gas_elements)
         rel_star_mass.extend(star_mass_elements/group_mass_elements)
-        rel_gas_mass.extend(gas_elements/group_mass_elements)
-        rel_dust_mass.extend(dust_mass_elements/group_mass_elements)
-        redshifts.extend(np.full(len(IDs),z[i]))
+        rel_gas_mass.extend(gas_elements_halo/group_mass_elements)
+        gas_mass_grid.extend(gas_elements_grid)
+        dust_mass.extend(dust_mass_elements)
+        redshifts.extend(np.full(len(IDs),z[snapshot]))
         all_IDs.extend(IDs)
         Q0.extend(Q0_elements)
         halo_radii.extend(halo_radii_elements)
@@ -334,8 +337,8 @@ def construct_freq_dataframe(dictionary, config, name, simname, fesc_galaxy=Fals
     if fesc_galaxy:
         dataset = pd.DataFrame({'ID':all_IDs, 'z':redshifts, 
             'HaloMass':halo_masses, 'Metallicity':metal, 'GasMetallicity':gas_metal,
-                            'FractionStars':rel_star_mass, 'FractionGas':rel_gas_mass,
-                            'FractionDust':rel_dust_mass, 'Q0':Q0, 
+                            'FractionStars':rel_star_mass, 'FractionGas':rel_gas_mass, 'GasMassGrid':gas_mass_grid,
+                            'DustMass':dust_mass, 'Q0':Q0, 
                             'HaloRadii':halo_radii, 'f_esc':f_esc, 'f_esc_0_2':f_esc_0_2,
                             'Temperature': Temperature, 'xHII':xHII, 'xHeII':xHeII, 'xHeIII':xHeIII, 'GridSize':grid_size,
                             'BHMass':bh_mass, 'BHGrowth':bh_growth, 'SFR':sfr,
@@ -348,8 +351,8 @@ def construct_freq_dataframe(dictionary, config, name, simname, fesc_galaxy=Fals
         try:
             dataset = pd.DataFrame({'ID':all_IDs, 'z':redshifts, 
                 'HaloMass':halo_masses, 'Metallicity':metal, 'GasMetallicity':gas_metal, 
-                                'FractionStars':rel_star_mass, 'FractionGas':rel_gas_mass,
-                                'FractionDust':rel_dust_mass, 'Q0':Q0, 
+                                'FractionStars':rel_star_mass, 'FractionGas':rel_gas_mass, 'GasMassGrid':gas_mass_grid,
+                                'DustMass':dust_mass, 'Q0':Q0, 
                                 'HaloRadii':halo_radii, 'f_esc':f_esc,
                                 'Temperature': Temperature, 'xHII':xHII, 'xHeII':xHeII, 'xHeIII':xHeIII, 'GridSize':grid_size,
                                 'BHMass':bh_mass, 'BHGrowth':bh_growth, 'SFR':sfr,
@@ -366,7 +369,7 @@ def construct_freq_dataframe(dictionary, config, name, simname, fesc_galaxy=Fals
             print(f'FractionStars: {len(rel_star_mass)}')
             print(f'FractionGas: {len(rel_gas_mass)}')
             
-            print(f'FractionDust: {len(rel_dust_mass)}')
+            print(f'FractionDust: {len(dust_mass)}')
             print(f'Q0: {len(Q0)}')
 
             print(f'HaloRadii: {len(halo_radii)}')
@@ -476,7 +479,7 @@ if __name__ == "__main__":
     simname_tng3 = 'L35n540TNG'
     all_runs_tng = ['TNG50_3'] 
 
-    build_df(run_names=['full_esc'], filename=None, simname=simname_tng, fesc_galaxy=True)
+    build_df(run_names=['conv1e8', 'conv1e9'], filename=None, simname=simname_tng, fesc_galaxy=False)
 
 
 # Currently not working

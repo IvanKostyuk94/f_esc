@@ -36,9 +36,20 @@ def star_ages(ID, redshift, conf, star_df):
 
 def add_age(df, conf, star_dic):
     ages = []
+    empty_ages = []
+    # for index, row in df.iterrows():
+    #     empty_ages.append([])
+    #     df['StellarAges'] = pd.Series(empty_ages)
     for index, row in df.iterrows():
         age = star_ages(ID=row.ID, redshift=row.z, conf=conf, star_df=star_dic[row.z])
         ages.append(age)
+        #df.StellarAges[index] = age
+        try:
+            if len(age) != len(row.per_source):
+                raise ValueError(f'The number of age elements and sources should be the same, got {len(age)} and {len(row.per_source)} instead')
+        except:
+            print(age)
+            print(row.per_source)
     df['StellarAges'] = pd.Series(ages)
     return
 
