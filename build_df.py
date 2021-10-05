@@ -134,8 +134,12 @@ def construct_halo_dict(simname, config):
                     ls.append(fesc)
                 except:
                     pass
-            #try:
-            df.loc[ID, ('f_esc', 4)] = np.array(ls)
+            try:
+                df.loc[ID, ('f_esc', 4)] = np.array([ls[-1]])
+            except:
+                print(ID)
+                print(ls)
+            
             # except:
             #     # This is a temporary patch since not all halo IDs have the f_esc calculated yet
             #     IDs_used.remove(ID)
@@ -157,7 +161,7 @@ def construct_halo_dict(simname, config):
     return halos
 
 # Construct a dataframe 
-def construct_freq_dataframe(dictionary, config, name, simname, fesc_galaxy=False):
+def construct_freq_dataframe(dictionary, config, name, simname, fesc_galaxy=False, prec='5.0e-2'):
     # Be careful with the hard coded redshifts 
     z = {'sn013':6,'sn008':8,'sn004':10}
     
@@ -238,22 +242,22 @@ def construct_freq_dataframe(dictionary, config, name, simname, fesc_galaxy=Fals
         # end test
         for ID in IDs:
             try:
-                f_esc_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['cum'])
-                per_freq_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['per_freq'])
-                per_source_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['per_source'])
-                emitted_photons_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['emitted_photons'])
-                escaped_photons_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['escaped_photons'])
-                frequencies_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['freqs'])
-                n_iterations_elements.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['1.0e0']['n_iterations'])
+                f_esc_elements.append(input_df.loc[ID, ('f_esc',4)][prec]['1.0e0']['cum'])
+                per_freq_elements.append(input_df.loc[ID, ('f_esc',4)][prec]['1.0e0']['per_freq'])
+                per_source_elements.append(input_df.loc[ID, ('f_esc',4)][prec]['1.0e0']['per_source'])
+                emitted_photons_elements.append(input_df.loc[ID, ('f_esc',4)][prec]['1.0e0']['emitted_photons'])
+                escaped_photons_elements.append(input_df.loc[ID, ('f_esc',4)][prec]['1.0e0']['escaped_photons'])
+                frequencies_elements.append(input_df.loc[ID, ('f_esc',4)][prec]['1.0e0']['freqs'])
+                n_iterations_elements.append(input_df.loc[ID, ('f_esc',4)][prec]['1.0e0']['n_iterations'])
 
                 if fesc_galaxy:
-                    f_esc_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['cum'])
-                    per_freq_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['per_freq'])
-                    per_source_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['per_source'])
-                    emitted_photons_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['emitted_photons'])
-                    escaped_photons_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['escaped_photons'])
-                    frequencies_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['freqs'])
-                    n_iterations_elements_0_2.append(input_df.loc[ID, ('f_esc',4)]['5.0e-2']['2.0e-1']['n_iterations'])
+                    f_esc_elements_0_2.append(input_df.loc[ID, ('f_esc',4)][prec]['2.0e-1']['cum'])
+                    per_freq_elements_0_2.append(input_df.loc[ID, ('f_esc',4)][prec]['2.0e-1']['per_freq'])
+                    per_source_elements_0_2.append(input_df.loc[ID, ('f_esc',4)][prec]['2.0e-1']['per_source'])
+                    emitted_photons_elements_0_2.append(input_df.loc[ID, ('f_esc',4)][prec]['2.0e-1']['emitted_photons'])
+                    escaped_photons_elements_0_2.append(input_df.loc[ID, ('f_esc',4)][prec]['2.0e-1']['escaped_photons'])
+                    frequencies_elements_0_2.append(input_df.loc[ID, ('f_esc',4)][prec]['2.0e-1']['freqs'])
+                    n_iterations_elements_0_2.append(input_df.loc[ID, ('f_esc',4)][prec]['2.0e-1']['n_iterations'])
 
             except:
                 f_esc_elements.append(np.NaN)
@@ -447,7 +451,7 @@ def get_average_quantities(halo_id, conf, redshift, simname):
     return average_quantities
 
 
-def build_df(run_names=['fid2'], filename=None, simname='L35n2160TNG', fesc_galaxy=False):
+def build_df(run_names=['fid2'], filename=None, simname='L35n2160TNG', fesc_galaxy=False, prec='5.0e-2'):
     for run_name in run_names:
         df_dir = '/u/ivkos/analysis/dfs'
         if filename == None:
@@ -460,12 +464,13 @@ def build_df(run_names=['fid2'], filename=None, simname='L35n2160TNG', fesc_gala
         config = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(config)
 
-        print('Building halo dictionary')
+        print(f'Building halo dictionary for {run_name}')
         halos = construct_halo_dict(simname, config=config)
-        print('Finished buiding halo dictionary')
-        print('Constructing halo dataframe')
+        print(f'Finished buiding halo dictionary for {run_name}')
+        print(f'Constructing halo dataframe for {run_name}')
         # Note here 'configs' corresponds to the names of the runs and not to the config object as above
-        construct_freq_dataframe(dictionary=halos, name=outputpath, config=run_name, simname=simname, fesc_galaxy=fesc_galaxy)
+        construct_freq_dataframe(dictionary=halos, name=outputpath, config=run_name, simname=simname, fesc_galaxy=fesc_galaxy, prec=prec)
+        print(f'Finished constructing the dataframe for run {run_name}')
     return
 
 if __name__ == "__main__":
@@ -479,7 +484,7 @@ if __name__ == "__main__":
     simname_tng3 = 'L35n540TNG'
     all_runs_tng = ['TNG50_3'] 
 
-    build_df(run_names=['conv1e8', 'conv1e9'], filename=None, simname=simname_tng, fesc_galaxy=False)
+    build_df(run_names=['all_sources'], filename=None, simname=simname_tng, fesc_galaxy=False, prec='1.0e-4')
 
 
 # Currently not working
