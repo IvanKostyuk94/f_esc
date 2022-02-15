@@ -5,6 +5,7 @@ import numpy as np
 import h5py
 import tables
 import os
+import pickle
 from crashpy.dataclasses.simulation import LoadedSimulation as Sim
 from crashpy.utilities import crashMemMap
 from get_spectrum import get_spectra
@@ -91,6 +92,8 @@ def construct_halo_dict(simname, config):
     sim = config.get_sim(simname)
     snaps = config.to_process[simname]
     
+    not_working = []
+    
     for snap in snaps:
         print(f'Working on snapshot {snap}')
 
@@ -121,11 +124,13 @@ def construct_halo_dict(simname, config):
 
             rundir = config.rundir(simname, config.snap_name(snap), config.halo_name(ID))
             df.loc[ID, 'csim_path'] = rundir
-            try:
-                csim = Sim(rundir)
-            except:
-                print(f'An error occured in {rundir}')
-                continue
+            #try:
+            #    csim = Sim(rundir)
+            #except:
+            #    not_working.append(rundir)
+            #    print(f'An error occured in {rundir}')
+            #    continue
+            csim = Sim(rundir)
             ls = []
             for i, pf in enumerate(csim.getAllphysfiles()):
                 try:
@@ -139,6 +144,7 @@ def construct_halo_dict(simname, config):
             except:
                 print(ID)
                 print(ls)
+            del csim
             
             # except:
             #     # This is a temporary patch since not all halo IDs have the f_esc calculated yet
@@ -157,7 +163,8 @@ def construct_halo_dict(simname, config):
         dic['IDs'] = np.array(finished_IDs)
 
         halos[config.snap_name(snap)] = dic 
-
+    with open('now_working', 'wb') as f:
+        pickle.dump(not_working, f)
     return halos
 
 # Construct a dataframe 
@@ -484,8 +491,9 @@ if __name__ == "__main__":
     simname_tng3 = 'L35n540TNG'
     all_runs_tng = ['TNG50_3'] 
 
-    build_df(run_names=['all_sources'], filename=None, simname=simname_tng, fesc_galaxy=False, prec='1.0e-4')
+    #build_df(run_names=['new_1e-1', 'new_3e-1', 'new_5e-1', 'new_7e-1', 'new_dust'], filename=None, simname=simname_tng, fesc_galaxy=False, prec='1.0e-4')
 
+    build_df(run_names=['all_sources'], filename=None, simname=simname_tng, fesc_galaxy=True, prec='1.0e-4')
 
 # Currently not working
 # def build_fid_df(simname, name='df_f_esc_freq.h5'):

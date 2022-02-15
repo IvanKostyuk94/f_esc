@@ -188,10 +188,10 @@ if __name__ == "__main__":
 
     h = 0.6774
 
-    df_name = 'full_esc.pickle'
+    df_name = 'esc_analysis.pickle'
     name_star_mass_dic = 'star_masses.pickle'
-    new_df_name = 'full_esc_updated.pickle'
-    conf = 'full_esc'
+    new_df_name = 'esc_analysis_updated.pickle'
+    conf = 'esc_analysis'
     update_df(df_name, name_star_mass_dic=None, new_df_name=None, conf=conf)
 
 
