@@ -489,11 +489,13 @@ if __name__ == "__main__":
     all_runs_tng = ['TNG50_2'] 
 
     simname_tng3 = 'L35n540TNG'
-    all_runs_tng = ['TNG50_3'] 
+    all_runs_tng = ['TNG50_3']
 
-    #build_df(run_names=['new_1e-1', 'new_3e-1', 'new_5e-1', 'new_7e-1', 'new_dust'], filename=None, simname=simname_tng, fesc_galaxy=False, prec='1.0e-4')
+    conv_runs = ['conv5e6', 'conv8e6', 'conv3e7']
 
-    build_df(run_names=['all_sources'], filename=None, simname=simname_tng, fesc_galaxy=True, prec='1.0e-4')
+    build_df(run_names=conv_runs, filename=None, simname=simname_tng, fesc_galaxy=False, prec='1.0e-4')
+
+    #build_df(run_names=['esc_analysis'], filename=None, simname=simname_tng, fesc_galaxy=True, prec='1.0e-4')
 
 # Currently not working
 # def build_fid_df(simname, name='df_f_esc_freq.h5'):
