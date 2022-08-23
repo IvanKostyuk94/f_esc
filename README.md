@@ -26,5 +26,7 @@ To use the notebooks the dataframes containing the halo information are needed. 
     <li><b>fesc_vs_quant.ipynb:</b> Used for analyzing the average escape fraction as a function of different properties.
     <li><b>clean_up.ipynb:</b> Collection of short scripts to delete unnecessary files in the simulation runs in order to reduce memory usage.
     <li><b>halo_image.ipynb:</b> Used to create projected images of halos as seen in fig. 4. This notebook needs the full halo maps and therefore also the full simulation results.
-    
+    <li><b>large_radii.ipynb:</b> Used to analyze the escape fraction as a function of distance from the halo center. Not used in the final project.
+
+
     
