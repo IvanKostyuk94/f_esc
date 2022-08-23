@@ -1,14 +1,11 @@
-import matplotlib.pyplot as plt
 import importlib.util
 import pandas as pd
 import numpy as np
 import h5py
-import tables
 import os
 import pickle
 from crashpy.dataclasses.simulation import LoadedSimulation as Sim
 from crashpy.utilities import crashMemMap
-from get_spectrum import get_spectra
 
 
 """
