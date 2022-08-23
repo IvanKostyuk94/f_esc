@@ -23,6 +23,8 @@ To use the notebooks the dataframes containing the halo information are needed. 
 <ul>
     <li><b>counts_histogram.ipynb:</b> Used to create plots summarizing the halo population as seen in fig. 1 of the paper.
     <li><b>esc_fraction.ipynb:</b> A python implementation of the code used to obtain escape fractions along lines of sight and create maps of densities and escape fractions of the halo as seen in fig. 5. Note that this code requires the full density and ionization maps and therefore needs the full simulation data of a halo. To be more readable this code needs to be refactored and most of it moved to a python file. 
+    <li><b>fesc_vs_quant.ipynb:</b> Used for analyzing the average escape fraction as a function of different properties.
+    <li><b>clean_up.ipynb:</b> Collection of short scripts to delete unnecessary files in the simulation runs in order to reduce memory usage.
+    <li><b>halo_image.ipynb:</b> Used to create projected images of halos as seen in fig. 4. This notebook needs the full halo maps and therefore also the full simulation results.
     
-</ul>
-
+    
