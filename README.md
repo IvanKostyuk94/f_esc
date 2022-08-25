@@ -20,7 +20,7 @@ To use the notebooks the dataframes containing the halo information are needed. 
 </ul>  
 
 ## Notebooks for data analysis
-<i>Most of these files mostly interact with the dataframe summarizing the results of the simulation and can be used idependently from the simulation runs</i>
+<i>Most of these notebooks interact with the dataframe summarizing the results of the simulation and can be used idependently from the simulation runs. The exception is <b>uv_emissivity.ipynb</b> which interacts with the TNG-50 database. </i>
 
 <ul>
     <li><b>counts_histogram.ipynb:</b> Used to create plots summarizing the halo population as seen in fig. 1 of the paper.
@@ -38,7 +38,7 @@ To use the notebooks the dataframes containing the halo information are needed. 
 </ul>  
 
 ## Notebooks for the preparation and handling of CRASH simulations
-
+<i>These notebooks contain tools to prepare and handle simulations runs and were not used for the final data analysis.</i>
 <ul>
     <li><b>clean_up.ipynb:</b> Collection of short scripts to delete unnecessary files in the simulation runs in order to reduce memory usage.
     <li><b>merge_sources.ipynb:</b> Used in the preprocessing of the halo runs in particular to reduce the number of sources. Also contains a number of tests run on the results. Requires the full simulation data to work with.
