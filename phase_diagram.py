@@ -41,29 +41,42 @@ def get_temperature(x_e, internal_en):
     return temperature.to(u.K).value
 
 
+def get_number_dens(density, z):
+
+    mass_to_kg = (1 * u.Msun).to(u.kg).value * 1e10 / h
+    volume_to_cm3 = ((1 * u.kpc).to(u.cm).value / h / (1 + z)) ** 3
+
+    X_H = 0.76
+    mu = m_p.value * (4 - 3 * X_H)
+
+    num_dens = density * mass_to_kg / volume_to_cm3 / mu
+    return num_dens
+
+
 def get_gas(z, id):
     _, sim_path = get_sim()
     gas = il.snapshot.loadHalo(sim_path, get_snap_number(z), id, "gas")
 
-    mass_to_g = (1 * u.Msun).to(u.g).value * 1e10 / h
-    volume_to_cm3 = ((1 * u.kpc).to(u.cm).value / h / (1 + z)) ** 3
+    mass_to_sun = 1e10 / h
 
     gas_dict = {}
-    gas_dict["density"] = gas["Density"] * mass_to_g / volume_to_cm3
-    gas_dict["mass"] = gas["Masses"] * mass_to_g
+    gas_dict["density"] = get_number_dens(gas["Density"], z)
+    gas_dict["mass"] = gas["Masses"] * mass_to_sun
     gas_dict["temperature"] = get_temperature(
         gas["ElectronAbundance"], gas["InternalEnergy"]
     )
     return gas_dict
 
 
-def get_bin_edges(gas, nx=30, ny=30):
-    x_bins = np.logspace(
-        np.log10(gas["density"].min()), np.log10(gas["density"].max()), num=nx
-    )
-    y_bins = np.logspace(
-        np.log10(gas["temperature"].min()), np.log10(gas["temperature"].max()), num=ny
-    )
+def gas_to_log_scale(gas):
+    gas["density"] = np.log10(gas["density"])
+    gas["temperature"] = np.log10(gas["temperature"])
+    return gas
+
+
+def get_bin_edges(gas, nx, ny):
+    x_bins = np.linspace(gas["density"].min(), gas["density"].max(), num=nx)
+    y_bins = np.linspace(gas["temperature"].min(), gas["temperature"].max(), num=ny)
     return x_bins, y_bins
 
 
@@ -87,18 +100,21 @@ def plot_parameters(params):
     parameters["figure_width"] = 25
     parameters["figure_height"] = 15
 
-    parameters["x_label"] = r"$\rho [\frac{\mathrm{g}}{\mathrm{cm}^3}]$"
-    parameters["y_label"] = r"$T [\mathrm{K}]$"
-    parameters["bar_label"] = r"$M[\mathrm{g}]$"
+    parameters["x_label"] = r"$\log(n) [\mathrm{cm}^{-3}]$"
+    parameters["y_label"] = r"$\log(T) [\mathrm{K}]$"
+    parameters["bar_label"] = r"$\log(\frac{M}{M_\mathrm{max}})$"
+
+    parameters["nx"] = 30
+    parameters["ny"] = 30
 
     if params != None:
         for element in params:
-            parameters[element.key] = element.value
+            parameters[element] = params[element]
     return parameters
 
 
-def get_hist(gas):
-    x_bins, y_bins = get_bin_edges(gas)
+def get_hist(gas, parameters):
+    x_bins, y_bins = get_bin_edges(gas, parameters["nx"], parameters["ny"])
     hist, *_ = binned_statistic_2d(
         x=gas["density"],
         y=gas["temperature"],
@@ -106,6 +122,7 @@ def get_hist(gas):
         bins=[x_bins, y_bins],
         statistic="sum",
     )
+    hist = hist / hist.max()
     return hist, x_bins, y_bins
 
 
@@ -119,8 +136,6 @@ def get_col_norm(hist):
 
 
 def set_ax_params(ax, parameters):
-    ax.set_xscale("log")
-    ax.set_yscale("log")
     ax.set_xlabel(parameters["x_label"], size=parameters["x_labelsize"])
     ax.set_ylabel(parameters["y_label"], size=parameters["y_labelsize"])
 
@@ -162,18 +177,25 @@ def plot_histogram(gas, params=None):
     parameters = plot_parameters(params)
     set_plt_params(parameters)
 
-    hist, x_bins, y_bins = get_hist(gas)
+    hist, x_bins, y_bins = get_hist(gas, parameters)
 
     f, ax = plt.subplots()
     col_norm = get_col_norm(hist)
     x_grid, y_grid = np.meshgrid(x_bins, y_bins)
 
     subfig = ax.pcolormesh(
-        x_grid, y_grid, np.log10(hist.T), norm=col_norm, cmap=plt.get_cmap("coolwarm")
+        x_grid, y_grid, np.log10(hist.T), norm=col_norm, cmap=plt.get_cmap("inferno")
     )
 
     set_ax_params(ax, parameters)
     create_color_bar(ax, parameters, subfig, f)
+    return
+
+
+def generate_histogram_plot(z, id, plot_params=None):
+    gas = get_gas(z, id)
+    gas = gas_to_log_scale(gas)
+    plot_histogram(gas, params=plot_params)
     return
 
 
