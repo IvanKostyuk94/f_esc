@@ -10,13 +10,9 @@ from matplotlib import pyplot as plt
 from matplotlib import colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import binned_statistic_2d
+from crashpy.utilities import crashMemMap
 
 h = TNGcosmo.h
-
-
-def add_StarMass(df):
-    df["StarMass"] = df["HaloMass"] * df["FractionStars"] * 1e10 / h
-    return
 
 
 def get_sim():
@@ -27,9 +23,54 @@ def get_sim():
     return sim, sim_path
 
 
-def get_snap_number(z):
-    z_to_snap = {6: 13, 8: 8, 10: 4}
+def get_snap_number(z, numerical=True):
+    if numerical:
+        z_to_snap = {6: 13, 8: 8, 10: 4}
+    else:
+        z_to_snap = {6: "sn013", 8: "sn008", 10: "sn004"}
     return z_to_snap[z]
+
+
+def get_paths(id, z, conf="new_main"):
+    snap = get_snap_number(z, numerical=False)
+    conf_dir = os.path.join("/ptmp/mpa/mglatzle/TNG_f_esc", conf)
+    simulation_path = os.path.join(
+        conf_dir, f"run/L35n2160TNG/{snap}/g{id}/Output/phys_ic00_rt05.out"
+    )
+    input_path = os.path.join(
+        conf_dir, f"run/L35n2160TNG/{snap}/g{id}/Input/temp_ic00.in"
+    )
+    dens_path = os.path.join(
+        conf_dir, f"run/L35n2160TNG/{snap}/g{id}/Input/dens_ic00.in"
+    )
+    return input_path, simulation_path, dens_path
+
+
+def get_maps(id, z, get_output, conf="esc_analysis"):
+    input_path, sim_path, dens_path = get_paths(id, z, conf=conf)
+    if get_output:
+        temp = crashMemMap(sim_path, 1)
+    else:
+        temp = crashMemMap(input_path, 1)
+    dens = crashMemMap(dens_path, "all")
+
+    maps = {}
+    maps["temp"] = temp
+    maps["dens"] = dens[0]
+
+    return maps
+
+
+def get_cell_volume(id, z, maps, conf="esc_analysis"):
+    df_dir = "/u/ivkos/analysis/dfs"
+    df_path = os.path.join(df_dir, conf + ".pickle")
+    df = pd.read_pickle(df_path)
+    to_cm = (1 * u.kpc).to(u.cm).value / h
+    halo_rad = df[(df.ID == id) & (df.z == z)].HaloRadii.values[0] * to_cm
+    cells = maps[next(iter(maps))].shape[0]
+    cell_size = 2 * halo_rad / cells
+    cell_volume = cell_size**3
+    return cell_volume
 
 
 def get_temperature(x_e, internal_en):
@@ -68,6 +109,17 @@ def get_gas(z, id):
     return gas_dict
 
 
+def get_mapped_gas(id, z, get_output, conf="esc_analysis"):
+    maps = get_maps(id, z, get_output, conf=conf)
+    cell_vol = get_cell_volume(id, z, maps, conf)
+
+    gas = {}
+    gas["density"] = np.log10(maps["dens"].flatten())
+    gas["temperature"] = np.log10(maps["temp"].flatten())
+    gas["mass"] = maps["dens"].flatten() * cell_vol
+    return gas
+
+
 def gas_to_log_scale(gas):
     gas["density"] = np.log10(gas["density"])
     gas["temperature"] = np.log10(gas["temperature"])
@@ -104,8 +156,17 @@ def plot_parameters(params):
     parameters["y_label"] = r"$\log(T) [\mathrm{K}]$"
     parameters["bar_label"] = r"$\log(\frac{M}{M_\mathrm{max}})$"
 
-    parameters["nx"] = 30
+    parameters["nx"] = 45
     parameters["ny"] = 30
+
+    parameters["v_min"] = -4
+    parameters["v_max"] = 0
+
+    parameters["x_lim_min"] = -5
+    parameters["x_lim_max"] = 0
+
+    parameters["y_lim_min"] = 3
+    parameters["y_lim_max"] = 6.5
 
     if params != None:
         for element in params:
@@ -126,9 +187,11 @@ def get_hist(gas, parameters):
     return hist, x_bins, y_bins
 
 
-def get_col_norm(hist):
-    v_min = np.log10(hist[hist > 0].min())
-    v_max = np.log10(hist.max())
+def get_col_norm(hist, parameters):
+    # v_min = np.log10(hist[hist > 0].min())
+    # v_max = np.log10(hist.max())
+    v_min = parameters["v_min"]
+    v_max = parameters["v_max"]
     v_center = (v_max + v_min) / 2
 
     col_norm = colors.DivergingNorm(vmin=v_min, vcenter=v_center, vmax=v_max)
@@ -138,6 +201,9 @@ def get_col_norm(hist):
 def set_ax_params(ax, parameters):
     ax.set_xlabel(parameters["x_label"], size=parameters["x_labelsize"])
     ax.set_ylabel(parameters["y_label"], size=parameters["y_labelsize"])
+
+    ax.set_xlim(parameters["x_lim_min"], parameters["x_lim_max"])
+    ax.set_ylim(parameters["y_lim_min"], parameters["y_lim_max"])
 
     ax.tick_params(
         length=parameters["length_major_ticks"], width=parameters["width_major_ticks"]
@@ -180,7 +246,7 @@ def plot_histogram(gas, params=None):
     hist, x_bins, y_bins = get_hist(gas, parameters)
 
     f, ax = plt.subplots()
-    col_norm = get_col_norm(hist)
+    col_norm = get_col_norm(hist, parameters)
     x_grid, y_grid = np.meshgrid(x_bins, y_bins)
 
     subfig = ax.pcolormesh(
@@ -192,12 +258,19 @@ def plot_histogram(gas, params=None):
     return
 
 
-def generate_histogram_plot(z, id, plot_params=None):
-    gas = get_gas(z, id)
-    gas = gas_to_log_scale(gas)
+def generate_histogram_plot(
+    z, id, from_tng=True, get_output=False, plot_params=None, conf="esc_analysis"
+):
+    if from_tng:
+        gas = get_gas(z, id)
+        gas = gas_to_log_scale(gas)
+    else:
+        gas = get_mapped_gas(id, z, get_output, conf)
+
     plot_histogram(gas, params=plot_params)
     return
 
 
-example_halos_1e7 = [(4779, 6, 0.84), (2606, 8, 0.556570), (519, 10, 0.643313)]
-example_halos_1e8 = [(221, 6, 0.489819), (8, 10, 0.565650)]
+if __name__ == "__main__":
+    example_halos_1e7 = [(4779, 6, 0.84), (2606, 8, 0.556570), (519, 10, 0.643313)]
+    example_halos_1e8 = [(221, 6, 0.489819), (8, 10, 0.565650)]
