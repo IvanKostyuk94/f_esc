@@ -132,7 +132,7 @@ def get_bin_edges(gas, nx, ny):
     return x_bins, y_bins
 
 
-def plot_parameters(params):
+def plot_parameters(params, multiple=False):
     parameters = {}
     parameters["x_labelsize"] = 50
     parameters["y_labelsize"] = 50
@@ -149,8 +149,8 @@ def plot_parameters(params):
 
     parameters["axes_width"] = 3
 
-    parameters["figure_width"] = 25
-    parameters["figure_height"] = 15
+    parameters["figure_width"] = 40
+    parameters["figure_height"] = 35
 
     parameters["x_label"] = r"$\log(n) [\mathrm{cm}^{-3}]$"
     parameters["y_label"] = r"$\log(T) [\mathrm{K}]$"
@@ -162,11 +162,11 @@ def plot_parameters(params):
     parameters["v_min"] = -4
     parameters["v_max"] = 0
 
-    parameters["x_lim_min"] = -5
+    parameters["x_lim_min"] = -4.8
     parameters["x_lim_max"] = 0
 
-    parameters["y_lim_min"] = 3
-    parameters["y_lim_max"] = 6.5
+    parameters["y_lim_min"] = 2.8
+    parameters["y_lim_max"] = 6.4
 
     if params != None:
         for element in params:
@@ -187,7 +187,7 @@ def get_hist(gas, parameters):
     return hist, x_bins, y_bins
 
 
-def get_col_norm(hist, parameters):
+def get_col_norm(parameters):
     # v_min = np.log10(hist[hist > 0].min())
     # v_max = np.log10(hist.max())
     v_min = parameters["v_min"]
@@ -216,9 +216,13 @@ def set_ax_params(ax, parameters):
     return
 
 
-def create_color_bar(ax, parameters, subfig, f):
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.1)
+def create_color_bar(ax, parameters, subfig, f, multiple=False):
+    if multiple:
+        f.subplots_adjust(right=0.9)
+        cax = f.add_axes([0.95, 0.12, 0.05, 0.76])
+    else:
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.1)
     cbar = f.colorbar(subfig, cax=cax)
     cbar.set_label(parameters["bar_label"], size=parameters["colorbar_labelsize"])
     cbar.ax.tick_params(labelsize=parameters["colorbar_ticklabelsize"])
@@ -246,7 +250,7 @@ def plot_histogram(gas, params=None):
     hist, x_bins, y_bins = get_hist(gas, parameters)
 
     f, ax = plt.subplots()
-    col_norm = get_col_norm(hist, parameters)
+    col_norm = get_col_norm(parameters)
     x_grid, y_grid = np.meshgrid(x_bins, y_bins)
 
     subfig = ax.pcolormesh(
@@ -255,6 +259,45 @@ def plot_histogram(gas, params=None):
 
     set_ax_params(ax, parameters)
     create_color_bar(ax, parameters, subfig, f)
+    return
+
+
+def get_halo_gases(zs, ids, conf="esc_analysis"):
+    halo_gases = []
+    for id, z in zip(ids, zs):
+        gases = []
+        gases.append(gas_to_log_scale(get_gas(z, id)))
+        gases.append(get_mapped_gas(id, z, get_output=False, conf=conf))
+        gases.append(get_mapped_gas(id, z, get_output=True, conf=conf))
+        halo_gases.append(gases)
+    return halo_gases
+
+
+def plot_multiple_histograms(halo_gases, params=None):
+
+    parameters = plot_parameters(params, multiple=True)
+    set_plt_params(parameters)
+
+    col_norm = get_col_norm(parameters)
+
+    f, axs = plt.subplots(
+        3, 2, sharex="col", sharey="row", gridspec_kw={"hspace": 0, "wspace": 0}
+    )
+    for i, gases in enumerate(halo_gases):
+        for j, gas in enumerate(gases):
+            hist, x_bins, y_bins = get_hist(gas, parameters)
+            x_grid, y_grid = np.meshgrid(x_bins, y_bins)
+            subfig = axs[j, i].pcolormesh(
+                x_grid,
+                y_grid,
+                np.log10(hist.T),
+                norm=col_norm,
+                cmap=plt.get_cmap("inferno"),
+            )
+            if i == 1:
+                parameters["y_label"] = ""
+            set_ax_params(axs[j, i], parameters)
+    create_color_bar(axs, parameters, subfig, f, multiple=True)
     return
 
 
@@ -268,6 +311,12 @@ def generate_histogram_plot(
         gas = get_mapped_gas(id, z, get_output, conf)
 
     plot_histogram(gas, params=plot_params)
+    return
+
+
+def generate_multiple_histograms(zs, ids, plot_params=None, conf="esc_analysis"):
+    halo_gases = get_halo_gases(zs, ids, conf)
+    plot_multiple_histograms(halo_gases, params=plot_params)
     return
 
 
