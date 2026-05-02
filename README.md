@@ -1,45 +1,98 @@
-# Ionizing photon production and escape fractions during cosmic reionization in the TNG50 simulation 
+# f_esc
 
-Toolkit used to analyze data and create plots of Illustris TNG-50 halos post-processed with the radiation transfer code CRASH to obtain the state of radiational equilibrium.
+Code accompanying the paper:
 
-The findings are summarized in this <a href="https://arxiv.org/abs/2207.11278">paper</a>.
+> **Ionizing photon production and escape fractions during cosmic reionization in the TNG50 simulation**
+> Ivan Kostyuk, Dylan Nelson, Benedetta Ciardi, Martin Glatzle, Annalisa Pillepich
+> *MNRAS 521, 3077 (2023)* — [DOI: 10.1093/mnras/stad677](https://doi.org/10.1093/mnras/stad677) · [arXiv:2207.11278](https://arxiv.org/abs/2207.11278)
 
-To use the notebooks the dataframes containing the halo properties are needed. To get the dataframes please contact me under <a href = "mailto: ivkos@mpa-garching.mpg.de">ivkos@mpa-garching.mpg.de</a>.
+## Science context
 
-## Python files
+Understanding which galaxies supply the bulk of ionizing photons during the epoch of reionization (6 < z < 10) requires knowing not just how many ionizing photons are produced, but what fraction escape from their host halos. Measuring this escape fraction *f*<sub>esc</sub> directly at high redshift is observationally out of reach, and theoretical predictions differ substantially depending on how radiative transfer and sub-grid absorption are modelled.
 
-<i>These files interact directly with either the CRASH post-processing runs or TNG50 snapshot data</i>
-<ul>
-    <li><b>build_df.py:</b> Goes through the folder of simulation runs and creates a <a href="https://pandas.pydata.org/">pandas</a> dataframe containing the properties of the examined halos</li>
-    <li><b>update_df.py:</b></li> Adds several additional columns to the halo dataframe namely the ages of stellar particles in the halo as well as the gas clumping, surface stellar density and surface gas density of the central galaxy, defined to be enclosed by 0.2Rvir.
-    <li><b>add_metallicities.py:</b></li> Adds an additional column to the dataframe containing stellar metallicities. Should be moved into <b>update_df.py</b> in the future
-    <li><b>prepare_new_runs.py:</b> Tools for preparing a new CRASH post-processing run.
-    <li><b>synchronize_folders.py:</b> Tools for moving halos from the RT simulations performed with a reduced number of stellar particles to the escape fraction calculation performed with the full set of stellar particles.
-    <li><b>build_radius_df.py:</b></li> <b>Deprecated</b> code originally used to analyze the escape fraction at different distances from the halo center. Should this become necessary in the future I would recommend to change <b>build_df.py</b> with elements from this file.
-    <li><b>fix_stellar_ages.py:</b></li> <b>Deprecated</b> code which was only used when <b>update_df.py</b> used the wrong stellar particles in a data frame update.
-</ul>  
+This repository contains the analysis code for a study that post-processes ~4 000 TNG50 galaxies (10<sup>6</sup> ≤ M<sub>★</sub>/M<sub>☉</sub> ≤ 10<sup>8</sup>) with the 3D multi-frequency radiative transfer code [CRASH](https://crash.cita.utoronto.ca/), computing *f*<sub>esc</sub> self-consistently along thousands of lines of sight per halo.
 
-## Notebooks for data analysis
-<i>Most of these notebooks interact with the dataframe summarizing the results of the simulation and can be used idependently from the simulation runs. The exceptions arer <b>uv_emissivity.ipynb</b> which interacts with the TNG-50 database as well as <b>esc_fraction.ipynb</b> and <b>halo_image.ipynb</b> which require the simulation runs of the halos that need to be plotted. </i>
+Key results:
+- *f*<sub>esc</sub> rises with stellar mass from ~0.3 at M<sub>★</sub> = 10<sup>6</sup> M<sub>☉</sub> to ~0.6 at M<sub>★</sub> = 10<sup>7.5</sup> M<sub>☉</sub>, with hints of a turnover at higher masses
+- Significant scatter at fixed mass, driven by diversity in the ionizing photon rate and the spatial relationship between stellar sources and the gas density field
+- Dust reduces *f*<sub>esc</sub> by a few percent at low masses and up to 10% for M<sub>★</sub> ≳ 10<sup>6.5</sup> M<sub>☉</sub>
+- *f*<sub>esc</sub> is energy-dependent: photons above 54.4 eV (relevant for He reionization and binary-star models) escape at a substantially lower rate than lower-energy ionizing photons
+- Halos with M<sub>★</sub> ≲ 10<sup>7.5</sup> M<sub>☉</sub> dominate the global ionizing emissivity at all redshifts studied
 
-<ul>
-    <li><b>counts_histogram.ipynb:</b> Used to create plots summarizing the halo population as seen in fig. 1 of the paper.
-    <li><b>esc_fraction.ipynb:</b> A python implementation of the code used to obtain escape fractions along lines of sight and create maps of densities and escape fractions of the halo as seen in fig. 5. Note that this code requires the full density and ionization maps and therefore needs the full simulation data of a halo. To be more readable, in the future this code needs to be refactored and most of it moved to a python file. 
-    <li><b>fesc_vs_quant.ipynb:</b> Used for analyzing the average escape fraction as a function of different properties.
-    <li><b>halo_image.ipynb:</b> Used to create projected images of halos as seen in fig. 4. This notebook needs the full halo maps and therefore also the full simulation results.
-    <li><b>large_radii.ipynb:</b> Used to analyze the escape fraction as a function of distance from the halo center. Not used in the final project.
-    <li><b>loc_esc.ipynb:</b> Used to analyze the effect of using different local escape fractions as seen in fig. 7 of the paper.
-    <li><b>median_fesc.ipynb:</b> Used to analyze the dependence of the escape fraction as a function of stellar and halo mass, as well as to compare the escape fraction with and without dust and compare our results to literature. Figs. 2, 3 and 13 were created using this notebook.
-    <li><b>numerical_convergence_tests.ipynb:</b> A number of tests to investigate the numerical convergence obtained with the source number reduction. Fig. A1 was created using this notebook.
-    <li><b>r_fesc.ipynb:</b> Used to analyze the properties including the escape fraction of individual stellar particles. Used to create fig. 10.
-    <li><b>histograms.ipynb:</b> Used to create 2D histograms to investigate the effect halo properties have on the escape fraction. This was used to create fig. 6. In addition, there are some tools developed to separate the two modes of escape fractions at lower stellar masses which were not utilised in the paper.
-    <li><b>spectra.ipynb:</b> Used to analyze the spectral dependence of the escape fraction as seen in figs. 11 and 12. 
-    <li><b>uv_emissivity.ipynb:</b> Used to analyze the escaped ionizing photon density in TNG-50 given the ionizing photon escape as predicted with the CRASH radiation transfer and compare the results to literature. This was used to create figs.8 and 9 of the paper.
-</ul>  
+## Repository structure
 
-## Notebooks for the preparation and handling of CRASH simulations
-<i>These notebooks contain tools to prepare and handle simulation runs and were not used for the final data analysis.</i>
-<ul>
-    <li><b>clean_up.ipynb:</b> Collection of short scripts to delete unnecessary files in the simulation runs in order to reduce memory usage.
-    <li><b>merge_sources.ipynb:</b> Used in the preprocessing of the halo runs in particular to reduce the number of sources. Also contains a number of tests run on the results. Requires the full simulation data to work with.
-</ul>  
+The notebooks in this repo are **load-bearing**: each one produces specific figures in the paper and contains the full analysis pipeline for that result. They are not exploratory scratch pads — they are the analysis.
+
+### Python scripts
+
+These scripts interact directly with the CRASH post-processing runs or TNG50 snapshot data and must be run before the analysis notebooks.
+
+| Script | Purpose |
+|---|---|
+| `build_df.py` | Reads CRASH output folders and assembles a pandas dataframe of halo properties |
+| `update_df.py` | Adds stellar ages, gas clumping, and surface density columns to the dataframe |
+| `add_metallicities.py` | Appends stellar metallicities to the dataframe |
+| `prepare_new_runs.py` | Tools for setting up a new CRASH post-processing run |
+| `synchronize_folders.py` | Moves halos from reduced-source RT runs to full-source *f*<sub>esc</sub> calculations |
+| `phase_diagram.py` | Generates phase diagram data |
+
+### Analysis notebooks (paper figures)
+
+These notebooks read the compiled dataframe and produce the paper figures. They can be run independently of the simulation data, provided the dataframe is available (see [Data](#data) below).
+
+| Notebook | Figures | What it does |
+|---|---|---|
+| `counts_histogram.ipynb` | Fig. 1 | Halo population summary plots |
+| `median_fesc.ipynb` | Figs. 2, 3, 13 | *f*<sub>esc</sub> vs stellar/halo mass; dust comparison; literature comparison |
+| `fesc_vs_quant.ipynb` | — | *f*<sub>esc</sub> as a function of various galaxy properties |
+| `histograms.ipynb` | Fig. 6 | 2D histograms of halo properties vs *f*<sub>esc</sub>; bimodal escape fraction analysis |
+| `loc_esc.ipynb` | Fig. 7 | Effect of different local (cloud-scale) escape fraction assumptions |
+| `uv_emissivity.ipynb` | Figs. 8, 9 | Escaped ionizing photon density in TNG50; comparison to literature |
+| `r_fesc.ipynb` | Fig. 10 | Properties of individual stellar particles and their contribution to *f*<sub>esc</sub> |
+| `spectra.ipynb` | Figs. 11, 12 | Spectral (energy) dependence of *f*<sub>esc</sub> |
+| `numerical_convergence_tests.ipynb` | Fig. A1 | Source number reduction convergence tests |
+| `large_radii.ipynb` | — | *f*<sub>esc</sub> as a function of aperture radius (not in final paper) |
+
+### Notebooks requiring full simulation data
+
+These two notebooks need the raw CRASH density and ionization maps, not just the dataframe:
+
+| Notebook | Figures | What it does |
+|---|---|---|
+| `esc_fraction.ipynb` | Fig. 5 | Line-of-sight *f*<sub>esc</sub> maps and density projections for individual halos |
+| `halo_image.ipynb` | Fig. 4 | Projected images of halo gas and stellar distributions |
+
+### Simulation management notebooks
+
+Not used for data analysis — for preparing and cleaning CRASH runs:
+
+| Notebook | Purpose |
+|---|---|
+| `merge_sources.ipynb` | Source reduction pre-processing; includes validation tests |
+| `clean_up.ipynb` | Deletes intermediate simulation files to reduce disk usage |
+
+## Data
+
+The analysis notebooks require the compiled halo dataframe, which is not included in this repository due to size. To obtain the dataframe, please open an issue or reach out via the contact on the [arXiv page](https://arxiv.org/abs/2207.11278).
+
+## Requirements
+
+Python ≥ 3.7, NumPy, pandas, matplotlib, h5py, astropy. Access to IllustrisTNG simulation data and CRASH outputs is required to run the simulation-facing scripts.
+
+## Citation
+
+If you use this code, please cite:
+
+```bibtex
+@article{Kostyuk2023fesc,
+  author  = {Kostyuk, Ivan and Nelson, Dylan and Ciardi, Benedetta and Glatzle, Martin and Pillepich, Annalisa},
+  title   = {Ionizing photon production and escape fractions during cosmic reionization in the {TNG50} simulation},
+  journal = {MNRAS},
+  year    = {2023},
+  volume  = {521},
+  pages   = {3077},
+  doi     = {10.1093/mnras/stad677},
+  eprint  = {2207.11278},
+  archivePrefix = {arXiv}
+}
+```
