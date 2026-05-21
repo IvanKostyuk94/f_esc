@@ -1,5 +1,12 @@
 /*
 !/.gitignore
-!/*.py
-!/*ipynb
+!/.gitattributes
+!/scripts
+!/notebooks
+!/src
+!/tests
 !/*.md
+!/scripts/*
+!/notebooks/*
+!/src/*
+!/tests/*
